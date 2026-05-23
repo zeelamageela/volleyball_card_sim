@@ -1,0 +1,35 @@
+player_name,role,ability_name,trigger,condition_field,condition_value,effect,effect_value,is_active
+Hammer,Setter,Jump Serve,on_serve,,,serve_value_bonus,2,false
+Hammer,Setter,Zone Fire,on_set,set_card_value,>=5,tip_threshold_delta,1,false
+Crusher,OPP,Overpower,on_attack,attack_card_value,>=8,over_block_bonus,4,false
+Crusher,OPP,Relentless,on_attack,attack_card_value,>=7,hold_card,1,false
+Fortress,MB,Spread Block,on_block,,,adjacent_block_bonus,2,false
+Fortress,MB,Nasty Deflect,on_block_deflection,,,deflect_dig_threshold,2,false
+Breaker,OH,Solo Shot,on_attack,,,single_block_only,1,false
+Breaker,OH,Lane Split,on_attack,attack_card_value,>=6,over_block_bonus,2,false
+Hawk,Libero,Eagle Eye,on_dig,,,dig_threshold,2,false
+Hawk,Libero,Clean Pass,on_dig_success,dig_type,normal,set_value_delta,2,false
+Hustle,DS,Dive and Roll,on_chase,,,chase_card_bonus,3,false
+Hustle,DS,Second Wind,on_dig_failure,,,chase_card_bonus,1,false
+Maestro,Setter,Maestro Touch,on_set,set_card_value,>=7,set_value_delta,2,false
+Maestro,Setter,Floater,on_serve,,,serve_value_bonus,1,false
+Phantom,OPP,Laser Shot,on_attack,attack_card_value,>=7,pierce_block,1,false
+Phantom,OPP,Ghost Tip,on_tip,,,tip_value_bonus,2,false
+Wall,MB,Net Presence,on_block,,,adjacent_block_bonus,2,false
+Wall,MB,Hard Redirect,on_block_deflection,,,deflect_dig_threshold,2,false
+Blade,OH,Kill Shot,on_attack,attack_card_value,>=8,pierce_block,1,false
+Blade,OH,Blade Edge,on_attack,hand_size,<=2,attack_value_bonus,3,false
+Spider,Libero,Safe Hands,on_dig,,,dig_threshold,1,false
+Spider,Libero,Quick Transition,on_dig_success,dig_type,normal,set_value_delta,2,false
+Ghost,DS,Slide,on_chase,,,chase_card_bonus,2,false
+Ghost,DS,Rising,on_dig_failure,,,chase_card_bonus,3,false
+Lancer,Setter,Quick Arc,on_set,set_card_value,>=8,tip_threshold_delta,2,false
+Lancer,Setter,Precision Serve,on_serve,,,serve_value_bonus,1,false
+Cannon,OPP,Read the Block,on_attack,,,over_block_bonus,3,false
+Cannon,OPP,Unstoppable,on_attack,attack_card_value,>=8,no_chase,1,false
+Spike,OH,Glass Jaw,on_attack,attack_card_value,1,wipe_block,1,false
+Spike,OH,Power Roll,on_attack,attack_card_value,>=7,roll_shot,1,false
+Thread,OPP,Seam Finder,on_attack,attack_card_value,>=8,seam_shot,1,false
+Thread,OPP,Precision,on_attack,attack_card_value,>=8,pierce_block,1,false
+Roller,OH,Roll Shot,on_attack,attack_card_value,>=6,roll_shot,1,false
+Roller,OH,Topspin Ace,on_attack,attack_card_value,10,seam_shot,1,false

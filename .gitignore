@@ -1,0 +1,23 @@
+# Python virtual environment
+.venv/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Test / coverage caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# VS Code
+.vscode/
+
+# macOS metadata
+.DS_Store
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
