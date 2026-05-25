@@ -46,11 +46,11 @@ class SimStats:
             f"  Avg rallies/game   : {self.avg_rallies_per_game:.1f}",
             f"  Avg exchanges/rally: {self.avg_exchanges_per_rally:.2f}",
             f"{'─' * 40}",
-            "  Top rally endings:",
+            "  Rally endings (all types):",
         ]
         for reason, count in sorted(
             self.reason_counts.items(), key=lambda x: -x[1]
-        )[:5]:
+        ):
             lines.append(f"    {count:>6}x  {reason}")
         lines.append(f"{'─' * 40}")
         return "\n".join(lines)

@@ -31,14 +31,105 @@ LANE_TO_ROLE: Dict[int, PlayerRole] = {
 }
 
 
+@dataclass
+class SetTemplate:
+    """
+    Defines which lanes are available for attack after a set.
+    
+    front_lanes: Lane indices available for front-row attackers
+    back_lanes: Lane indices available for back-row attackers (DS/Setter, NOT Libero)
+    max_attackers: Maximum number of cards to place (1, 2, or 3)
+    """
+    front_lanes: List[int]
+    back_lanes: List[int]
+    max_attackers: int
+
+
+@dataclass
+class SetTemplate:
+    """
+    Defines which lanes are available for attack after a set.
+    
+    front_lanes: Lane indices available for front-row attackers
+    back_lanes: Lane indices available for back-row attackers (DS/Setter, NOT Libero)
+    max_attackers: Maximum number of cards to place (1, 2, or 3)
+    """
+    front_lanes: List[int]
+    back_lanes: List[int]
+    max_attackers: int
+
+
+def _build_setter_templates() -> Dict[int, SetTemplate]:
+    """
+    Normal play: Setter sets the ball.
+    
+    Set Template (Phase 4 updated):
+    1-7:  Standard Sets - Various lane configurations (3 attackers max)
+    8-10: High Sets - More hang time, complex attacks (4 attackers max)
+    """
+    templates: Dict[int, SetTemplate] = {}
+    
+    # Quick sets (1-3): No back-row attacks (too fast)
+    for v in (1, 2, 3):
+        templates[v] = SetTemplate(front_lanes=[1, 2, 3], back_lanes=[], max_attackers=3)
+    
+    # Strong side (4-5): OH + MB front, any back
+    for v in (4, 5):
+        templates[v] = SetTemplate(front_lanes=[1, 2], back_lanes=[1, 2, 3], max_attackers=3)
+    
+    # Weak side (6-7): MB + OPP front, any back
+    for v in (6, 7):
+        templates[v] = SetTemplate(front_lanes=[2, 3], back_lanes=[1, 2, 3], max_attackers=3)
+    
+    # High outside (8-9): OH + OPP front, any back (4 attackers!)
+    for v in (8, 9):
+        templates[v] = SetTemplate(front_lanes=[1, 3], back_lanes=[1, 2, 3], max_attackers=4)
+    
+    # Free choice (10): All lanes available (4 attackers!)
+    templates[10] = SetTemplate(front_lanes=[1, 2, 3], back_lanes=[1, 2, 3], max_attackers=4)
+    
+    return templates
+
+
+def _build_broken_play_templates() -> Dict[int, SetTemplate]:
+    """
+    Broken play: Non-setter (OPP/OH) sets the ball.
+    
+    Set Template:
+    1-3:  Strong Side - Front lanes 1-2, Back lane 2 (choose 2)
+    4-7:  Single Lane - Front lane 1 OR 3, Back lane 2 (choose 1)
+    8-10: Weak Side - Front lanes 2-3, Back lane 2 (choose 2)
+    """
+    templates: Dict[int, SetTemplate] = {}
+    
+    # Strong side (1-3): Limited options
+    for v in (1, 2, 3):
+        templates[v] = SetTemplate(front_lanes=[1, 2], back_lanes=[2], max_attackers=2)
+    
+    # Single lane (4-7): Emergency set
+    for v in (4, 5, 6, 7):
+        templates[v] = SetTemplate(front_lanes=[1, 3], back_lanes=[2], max_attackers=1)
+    
+    # Weak side (8-10): Limited options
+    for v in (8, 9, 10):
+        templates[v] = SetTemplate(front_lanes=[2, 3], back_lanes=[2], max_attackers=2)
+    
+    return templates
+
+
+# Build both template sets
+SETTER_TEMPLATES: Dict[int, SetTemplate] = _build_setter_templates()
+BROKEN_PLAY_TEMPLATES: Dict[int, SetTemplate] = _build_broken_play_templates()
+
+# Legacy support: Keep old SET_ELIGIBLE_LANES for backward compatibility during transition
 def _build_set_lanes() -> Dict[int, List[int]]:
-    """Map each set-card value (1–10) to eligible attack lane indices."""
+    """DEPRECATED: Legacy function for backward compatibility."""
     m: Dict[int, List[int]] = {}
-    for v in (1, 2, 3):   m[v] = [1, 2]      # quick set:    OH + MB
-    for v in (4, 5):      m[v] = [3, 2]      # weak side:   OPP + MB
-    for v in (6, 7):      m[v] = [1, 2]      # strong side: OH + MB
-    for v in (8, 9):      m[v] = [1, 3]      # high outside: OH + OPP
-    m[10] = [1, 2, 3]                         # free choice: any two front row
+    for v in (1, 2, 3):   m[v] = [1, 2]
+    for v in (4, 5):      m[v] = [3, 2]
+    for v in (6, 7):      m[v] = [1, 2]
+    for v in (8, 9):      m[v] = [1, 3]
+    m[10] = [1, 2, 3]
     return m
 
 

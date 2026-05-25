@@ -14,13 +14,14 @@ import random
 import sys
 from pathlib import Path
 
-from src.strategies import RandomStrategy, DummyStrategy
+from src.strategies import RandomStrategy, DummyStrategy, SmartStrategy
 from src.simulation import Simulation
 from src.abilities import load_player_cards, build_ability_engine
 
 
 STRATEGIES = {
     "random": RandomStrategy,
+    "smart": SmartStrategy,
 }
 
 DUMMY_ROSTER = Path("data/team_dummy.csv")
@@ -117,8 +118,7 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit(f"Error: player-cards file not found: {args.player_cards}")
         player_cards = load_player_cards(args.player_cards)
         engine_a = build_ability_engine(args.roster_a, player_cards)
-        if not is_pvd:
-            engine_b = build_ability_engine(args.roster_b, player_cards)
+        engine_b = build_ability_engine(args.roster_b, player_cards)
         if engine_a:
             print(f"Team A abilities loaded from {args.roster_a}")
         if engine_b:

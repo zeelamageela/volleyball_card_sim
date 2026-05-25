@@ -89,6 +89,23 @@ event (e.g. on_attack, on_block) and optionally only when a condition is met
   hand_size_mod       on_roster only.  Adds effect_value to this team's
                           effective HAND_SIZE for the entire game (+1 = 6-card
                           hand, −1 = 4-card hand with stronger abilities).
+  slide_lanes         on_attack only.  After blocks are revealed, attacker may
+                          shift to an adjacent lane (lane±1).  effect_value=1
+                          to enable.  Allows tactical repositioning to find
+                          weaker blocks.  (Phase 4)
+  back_row_pierce     on_attack only.  Back-row attacks from this player
+                          ignore all blocks.  effect_value=1 to enable.
+                          Only applies when attacking from back row.  (Phase 4)
+  min_blocker_only    on_attack only.  Defending team's block in this lane is
+                          limited to the MINIMUM card value placed (not the sum).
+                          Punishes over-committing blocks.  (Phase 4)
+  wild_block          on_block only.  Block cards at or below effect_value can
+                          be placed on ANY attacked lane (choose after seeing
+                          attacks).  Creates flexible defense.  (Phase 5)
+  force_high_block    on_attack only.  Blocks at or below effect_value are
+                          ignored for this attack.  Forces quality defense.  (Phase 5)
+  deck_swap_opponent  on_dig_success only.  Replace opponent's highest card
+                          with the top card of their deck.  Hand disruption.  (Phase 5)
 
 ── Valid condition_field values ───────────────────────────────────────────────
   attack_card_value   The raw value of the attack card (int) — on_attack
@@ -156,6 +173,12 @@ class EffectType:
     HAND_PEEK             = "hand_peek"
     EXCHANGE_CARD         = "exchange_card"
     HAND_SIZE_MOD         = "hand_size_mod"
+    SLIDE_LANES           = "slide_lanes"          # Phase 4: Attack can shift to adjacent lane
+    BACK_ROW_PIERCE       = "back_row_pierce"      # Phase 4: Back-row attacks pierce blocks
+    MIN_BLOCKER_ONLY      = "min_blocker_only"     # Phase 4: Only minimum block card counts
+    WILD_BLOCK            = "wild_block"           # Phase 5: Low cards can block any lane
+    FORCE_HIGH_BLOCK      = "force_high_block"     # Phase 5: Blocks below threshold ignored
+    DECK_SWAP_OPPONENT    = "deck_swap_opponent"   # Phase 5: Replace opponent card with deck top
 
 
 # ── Data model ─────────────────────────────────────────────────────────────────
@@ -422,6 +445,89 @@ class AbilityEngine:
             and a.condition_matches(ctx)
             for a in card.abilities
         )
+
+    def slide_lanes(self, role: "PlayerRole", attack_card_value: int) -> bool:
+        """True if attacker can shift to adjacent lane after blocks revealed (Phase 4)."""
+        card = self._cards.get(role)
+        if not card:
+            return False
+        ctx = {"attack_card_value": attack_card_value}
+        return any(
+            a.effect == EffectType.SLIDE_LANES
+            and a.trigger == Trigger.ON_ATTACK
+            and not a.is_active
+            and a.condition_matches(ctx)
+            for a in card.abilities
+        )
+
+    def back_row_pierce(self, role: "PlayerRole", attack_card_value: int) -> bool:
+        """True if back-row attacks from this player ignore blocks (Phase 4)."""
+        card = self._cards.get(role)
+        if not card:
+            return False
+        ctx = {"attack_card_value": attack_card_value}
+        return any(
+            a.effect == EffectType.BACK_ROW_PIERCE
+            and a.trigger == Trigger.ON_ATTACK
+            and not a.is_active
+            and a.condition_matches(ctx)
+            for a in card.abilities
+        )
+
+    def min_blocker_only(self, role: "PlayerRole", attack_card_value: int) -> bool:
+        """True if defending block is limited to minimum card (not sum) (Phase 4)."""
+        card = self._cards.get(role)
+        if not card:
+            return False
+        ctx = {"attack_card_value": attack_card_value}
+        return any(
+            a.effect == EffectType.MIN_BLOCKER_ONLY
+            and a.trigger == Trigger.ON_ATTACK
+            and not a.is_active
+            and a.condition_matches(ctx)
+            for a in card.abilities
+        )
+
+    def wild_block_threshold(self, role: "PlayerRole") -> int:
+        """Return threshold for wild block (0 if not available). Cards <= threshold can block any lane."""
+        card = self._cards.get(role)
+        if not card:
+            return 0
+        for a in card.abilities:
+            if (a.effect == EffectType.WILD_BLOCK
+                    and a.trigger == Trigger.ON_BLOCK
+                    and not a.is_active):
+                return a.effect_value
+        return 0
+
+    def force_high_block_threshold(self, role: "PlayerRole", attack_card_value: int) -> int:
+        """Return threshold for force_high_block (0 if not active). Blocks <= threshold are ignored."""
+        card = self._cards.get(role)
+        if not card:
+            return 0
+        ctx = {"attack_card_value": attack_card_value}
+        for a in card.abilities:
+            if (a.effect == EffectType.FORCE_HIGH_BLOCK
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                return a.effect_value
+        return 0
+
+    def deck_swap_opponent_on_dig(self, dig_type: str) -> bool:
+        """True if this dig success triggers opponent hand disruption."""
+        # Check all cards for DS role (most likely to have this)
+        for card in self._cards.values():
+            ctx = {"dig_type": dig_type}
+            if any(
+                a.effect == EffectType.DECK_SWAP_OPPONENT
+                and a.trigger == Trigger.ON_DIG_SUCCESS
+                and not a.is_active
+                and a.condition_matches(ctx)
+                for a in card.abilities
+            ):
+                return True
+        return False
 
     def activate_tip_threshold(self, set_card_value: int) -> None:
         """Call after the setter plays their card.  Accumulates tip_threshold_delta."""
