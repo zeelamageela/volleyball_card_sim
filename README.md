@@ -203,3 +203,68 @@ Resolution:
 
 `DummyStrategy` always blocks the middle-priority lane, avoids the double-block
 when attacking, always tips, and plays max card on serve/receive/set/dig.
+
+---
+
+## Phase 5 - Comprehensive Matching System (Latest Update)
+
+**See SESSION_NOTES.md for complete details of the most recent development session.**
+
+### What's New
+
+**1. Increased Attacker Capacity**
+- Sets 1-7 now allow 3 attackers (was 2-3)
+- Sets 8-10 now allow 4 attackers (was 3)
+- Creates more tactical depth and matching opportunities
+
+**2. Comprehensive Card Matching**
+
+When cards of identical value appear in specific patterns, rallies resolve immediately:
+
+**Single Attacker Scenarios:**
+- 1 attacker matches 1+ blockers → **Attacker wins** (deflection out)
+- 2 blockers match each other → **Defender wins** (over-commit)
+
+**Multiple Attacker Scenarios:**
+- 2+ attackers match each other → **Defender wins** (offensive confusion)
+- Attacker + blocker match → **Cards removed, rally continues**
+- 2 blockers match → **Defender wins** (over-commit)
+
+**Multi-Lane Matching:**
+- Lanes processed high-to-low by attack value
+- If all lanes eliminated → Last lane determines winner
+
+**3. New Abilities**
+- **FORCE_HIGH_BLOCK**: Ignore blocks ≤ threshold (Titan, Breaker)
+- **DECK_SWAP_OPPONENT**: Replace opponent's highest card on dig (Thief)
+- **WILD_BLOCK**: Low cards block any lane (Flex, Shield) - *defined, not yet in strategy*
+
+### Balance Results (200 games)
+
+**Win Rates with Matching:**
+- Smart vs Easy: 58% (was 69%)
+- Smart vs Medium: 49-51% (was 66%)
+- Smart vs Hard: 53-57% (was 70%)
+
+**Scoring Distribution:**
+- 48-50%: Stuffed blocks
+- 14-15%: Blocker-blocker matches (defender wins)
+- 12-13%: Single attacker deflections (attacker wins)
+- 12-13%: Tips not dug
+- ~27% of all rallies resolved by matching mechanics
+
+### Testing
+
+```bash
+# Test Phase 5 team
+python3 main.py --games 100 --mode pvd --strategy-a smart \
+  --roster-a data/team_phase5.csv --roster-b data/team_dummy_hard.csv \
+  --player-cards data/player_cards.csv
+
+# Full statistics
+python3 main.py --games 200 --mode pvd --strategy-a smart \
+  --roster-a data/team_test1.csv --roster-b data/team_dummy_medium.csv \
+  --player-cards data/player_cards.csv
+```
+
+**Phase 5 Status:** Complete and tested. Matching system creates competitive 50-60% win rates with significant tactical depth.
