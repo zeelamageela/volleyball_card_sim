@@ -158,11 +158,12 @@ class GridPlayer:
 
 
 class Team:
-    def __init__(self, name: str, rng: random.Random) -> None:
+    def __init__(self, name: str, rng: random.Random, use_hand: bool = True) -> None:
         self.name = name
         self.deck = Deck(rng)
         self.hand: List[Card] = []
         self.held_card: Optional[Card] = None
+        self.use_hand = use_hand
         self.ability_engine: Optional[AbilityEngine] = None
         self.players: List[GridPlayer] = [
             GridPlayer(PlayerRole.SETTER, 1),
@@ -184,10 +185,14 @@ class Team:
         return [p for p in self.players if p.can_receive_serve() and p.is_back_row()]
 
     def draw_starting_hand(self) -> None:
+        if not self.use_hand:
+            return
         self.hand = [self.deck.draw() for _ in range(HAND_SIZE)]
 
     def refill_hand(self) -> None:
         """Draw cards until hand is back to HAND_SIZE (plus any ability modifier)."""
+        if not self.use_hand:
+            return
         # Return any held card first
         if self.held_card is not None:
             self.hand.append(self.held_card)

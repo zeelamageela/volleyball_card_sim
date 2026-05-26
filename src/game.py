@@ -14,6 +14,7 @@ from .strategies import BaseStrategy
 
 POINTS_TO_WIN = 15
 MAX_EXCHANGES = 200  # safety cap to prevent infinite rallies
+_LANE_NAMES = {1: "OH", 2: "MB", 3: "OPP"}   # short lane labels for narrative
 
 
 @dataclass
@@ -21,7 +22,8 @@ class AttackCard:
     """Represents a single attack card with position information."""
     card: Card
     position: str  # "front" or "back"
-    
+    blind: bool = False   # True = drawn from deck face-down; value hidden during block/lane decisions
+
     def is_back_row(self) -> bool:
         return self.position == "back"
 
@@ -34,6 +36,33 @@ def resolve_attack(attack_value: int, block_value: int) -> AttackOutcomeType:
     if diff <= 2:
         return AttackOutcomeType.DEFLECT
     return AttackOutcomeType.STUFFED
+
+
+# Baseline threshold for the universal setter-cover mechanic.
+# Any team with a Libero or DS covers at this level (~50% of draws).
+_SETTER_COVER_BASE = 6
+
+
+def _cover_threshold(team: "Team") -> int:
+    """
+    Return the dig-card threshold needed for a Libero/DS to cover the setter's zone,
+    or 0 if the team has no eligible player (no Libero or DS on roster).
+    Baseline: _SETTER_COVER_BASE (~50% of random draws).
+    setter_cover ability cards lower the threshold below the baseline.
+    """
+    from .players import PlayerRole
+    has_eligible = any(
+        p.role in (PlayerRole.LIBERO, PlayerRole.DS)
+        for p in team.players
+    )
+    if not has_eligible:
+        return 0
+    threshold = _SETTER_COVER_BASE
+    if team.ability_engine:
+        ability_threshold = team.ability_engine.setter_cover_threshold()
+        if ability_threshold > 0:
+            threshold = min(threshold, ability_threshold)
+    return threshold
 
 
 def get_dig_defender_role(attack_lane: int, attack_card_value: int) -> PlayerRole:
@@ -74,13 +103,20 @@ class Rally:
         serving_strategy: BaseStrategy,
         receiving_strategy: BaseStrategy,
         rng: random.Random,
+        narrative: Optional[List[str]] = None,
     ) -> None:
         self._srv = serving_team
         self._rcv = receiving_team
         self._srv_strat = serving_strategy
         self._rcv_strat = receiving_strategy
         self._rng = rng
+        self._narrative = narrative
         self._broken_play = False  # Track if setter dug (broken play for next set)
+
+    def _narrate(self, msg: str) -> None:
+        """Append a message to the shared narrative list (no-op if none attached)."""
+        if self._narrative is not None:
+            self._narrative.append(msg)
 
     def play(self) -> RallyResult:
         exchange = 0
@@ -94,9 +130,20 @@ class Rally:
             self._srv.ability_engine.serve_value_bonus()
             if self._srv.ability_engine else 0
         )
+        self._narrate(
+            f"\n  Serve:   {self._srv.name} card {serve_card.value}"
+            + (f" (eff {serve_value})" if serve_value != serve_card.value else "")
+            + f"  →  targeting {_target.role.value}"
+        )
 
         # ── RECEIVE ──────────────────────────────────────────────────────────
         receive_card = self._phase_receive(serve_value)
+        _rcv_ok = receive_card.value >= serve_value
+        self._narrate(
+            f"  Receive: {self._rcv.name} card {receive_card.value}"
+            f"  vs serve {serve_value}"
+            f"  →  {'clean pass' if _rcv_ok else 'FAILED — chase needed'}"
+        )
 
         if receive_card.value < serve_value:
             # Failed reception → chase (applies to receptions as well as digs)
@@ -132,12 +179,19 @@ class Rally:
         # ── ATTACK LOOP ───────────────────────────────────────────────────────
         while exchange < MAX_EXCHANGES:
             exchange += 1
+            attacker_role = None  # resolved after lane choice; used by ability checks below
 
             # SET + HIT  — or ARMED ATTACK (no set, single OH/OPP lane)
             is_armed = next_attack_is_armed
             if is_armed:
                 next_attack_is_armed = False
                 attack_cards = self._phase_armed_attack(attacker, atk_strat, armed_lane)
+                for _ln, _acs in sorted(attack_cards.items()):
+                    for _ac in _acs:
+                        self._narrate(
+                            f"\n  Armed:   {attacker.name} lane {_ln} {_LANE_NAMES.get(_ln, '')}"
+                            f"  card {_ac.card.value} ({_ac.position})"
+                        )
             else:
                 # Consume any pending set delta from a previous dig success
                 set_delta = (
@@ -145,7 +199,27 @@ class Rally:
                     if attacker.ability_engine else 0
                 )
                 set_card, template = self._phase_set(attacker, atk_strat, set_delta)
+                _front_str = " + ".join(_LANE_NAMES.get(l, str(l)) for l in template.front_lanes)
+                _back_str  = (" + ".join(_LANE_NAMES.get(l, str(l)) for l in template.back_lanes)
+                               if template.back_lanes else "none")
+                self._narrate(
+                    f"\n  Set:     {attacker.name} card {set_card.value}"
+                    f"  →  front [{_front_str}]  back [{_back_str}]"
+                    f"  max {template.max_attackers}"
+                )
                 attack_cards = self._phase_hit(attacker, atk_strat, template)
+                for _ln, _acs in sorted(attack_cards.items()):
+                    for _ac in _acs:
+                        if _ac.blind:
+                            self._narrate(
+                                f"  Attack:  {attacker.name} lane {_ln} {_LANE_NAMES.get(_ln, '')}"
+                                f"  BLIND DRAW ({_ac.position})"
+                            )
+                        else:
+                            self._narrate(
+                                f"  Attack:  {attacker.name} lane {_ln} {_LANE_NAMES.get(_ln, '')}"
+                                f"  card {_ac.card.value} ({_ac.position})"
+                            )
                 
                 # Check if all attacks were canceled due to matching
                 if not attack_cards:
@@ -177,7 +251,13 @@ class Rally:
                 key=lambda ln: max(ac.card.value for ac in attack_cards[ln]),
                 reverse=True
             )
-            
+
+            # Capture how many lanes exist when the blocker committed.
+            # This determines whether a card-value match is a "draw-in deflect-out"
+            # (multiple lanes → attacker lured the blocker) or a "block read"
+            # (single lane → blocker had no choice, correctly reading the only attack).
+            initial_attack_lane_count = len(attack_cards)
+
             last_match_result = None  # Track last elimination for multi-lane all-cancel scenario
             lanes_to_remove = []
             
@@ -188,15 +268,18 @@ class Rally:
                 num_attackers = len(attack_values)
                 num_blockers = len(block_values)
                 
-                # 1. Check BLOCKER-BLOCKER match (2 blockers, same value)
+                # 1. Check BLOCKER-BLOCKER same value → CANCEL both, lane left unblocked
+                # Two blockers of the same value over-commit and cancel each other out.
+                # The attack proceeds against an empty block on this lane.
                 if num_blockers == 2 and block_values[0] == block_values[1]:
-                    match_value = block_values[0]
-                    lanes_to_remove.append(lane)
-                    last_match_result = {
-                        'winner': defender.name,
-                        'reason': f"Blocker-blocker match (lane {lane}, value {match_value}) - over-commit"
-                    }
-                    continue
+                    block_cards[lane] = []
+                    block_layout[lane] = 0
+                    block_max[lane] = 0
+                    self._narrate(
+                        f"  Match:   lane {lane} — blockers both {block_values[0]}"
+                        f"  →  block neutralized, attack unblocked"
+                    )
+                    continue  # skip attacker-blocker checks; lane stays active, unblocked
                 
                 # 2. Check ATTACKER-ATTACKER match (2+ attackers, any two same value)
                 if num_attackers >= 2:
@@ -234,15 +317,31 @@ class Rally:
                 # 3. Check ATTACKER-BLOCKER matches
                 if block_values:
                     if num_attackers == 1:
-                        # Single attacker matches ANY blocker → Attacker wins (deflection out)
                         attacker_value = attack_values[0]
                         if attacker_value in block_values:
                             num_matching_blockers = block_values.count(attacker_value)
                             lanes_to_remove.append(lane)
-                            last_match_result = {
-                                'winner': attacker.name,
-                                'reason': f"Single attacker matches blocker(s) (lane {lane}, value {attacker_value}, {num_matching_blockers} blocker(s)) - deflection out"
-                            }
+                            if initial_attack_lane_count > 1:
+                                # Multiple lanes in play: attacker drew the blocker to
+                                # this lane — deflection off the hands goes out of bounds.
+                                last_match_result = {
+                                    'winner': attacker.name,
+                                    'reason': (
+                                        f"Single attacker matches blocker(s) "
+                                        f"(lane {lane}, value {attacker_value}, "
+                                        f"{num_matching_blockers} blocker(s)) - deflection out"
+                                    )
+                                }
+                            else:
+                                # Only one lane — blocker had no choice and read it
+                                # perfectly. The block stands; defender wins.
+                                last_match_result = {
+                                    'winner': defender.name,
+                                    'reason': (
+                                        f"Block read single attack lane "
+                                        f"(lane {lane}, value {attacker_value}) - stuffed"
+                                    )
+                                }
                             continue
                     else:
                         # Multiple attackers: Remove any attacker-blocker matched cards
@@ -283,6 +382,10 @@ class Rally:
                     del block_layout[lane]
                 if lane in block_max:
                     del block_max[lane]
+
+            # Narrate match eliminations
+            if lanes_to_remove and last_match_result:
+                self._narrate(f"  Match:   {last_match_result['reason']}")
             
             # If all lanes eliminated, use last match result to determine winner
             if not attack_cards:
@@ -304,18 +407,26 @@ class Rally:
             if is_armed:
                 attack_lane = armed_lane
             else:
-                # Convert attack_cards to simplified view for strategy
-                # Show strongest card on each lane (prefer front-row)
-                simplified_attacks = {}
+                # Convert attack_cards to simplified view for strategy.
+                # Blind-drawn lanes are represented with value=0 so strategies
+                # know the card exists but the value is not yet revealed.
+                simplified_attacks: Dict[int, Card] = {}
                 for lane, cards_list in attack_cards.items():
-                    # Prefer front-row, then back-row
                     front = [ac for ac in cards_list if ac.position == "front"]
-                    back = [ac for ac in cards_list if ac.position == "back"]
-                    best_card = front[0].card if front else back[0].card
-                    simplified_attacks[lane] = best_card
-                
+                    back  = [ac for ac in cards_list if ac.position == "back"]
+                    known_front = [ac for ac in front if not ac.blind]
+                    known_back  = [ac for ac in back  if not ac.blind]
+                    if known_front:
+                        simplified_attacks[lane] = known_front[0].card
+                    elif known_back:
+                        simplified_attacks[lane] = known_back[0].card
+                    elif front:
+                        simplified_attacks[lane] = Card(value=0, color=front[0].card.color)
+                    else:
+                        simplified_attacks[lane] = Card(value=0, color=back[0].card.color)
+
                 attack_lane = atk_strat.choose_attack_lane(simplified_attacks, block_layout)
-            
+
             # Phase 4: SLIDE_LANES ability - can shift to adjacent lane with lower block
             # Check if attacker has slide_lanes ability and an adjacent lane is available
             if not is_armed and attacker.ability_engine and attacker_role:
@@ -340,7 +451,15 @@ class Rally:
                         if block_layout.get(best_adjacent, 0) < current_block:
                             # Slide to the better lane!
                             attack_lane = best_adjacent
-            
+
+            # Reveal any blind-drawn cards on the committed lane
+            for _bac in attack_cards.get(attack_lane, []):
+                if _bac.blind:
+                    self._narrate(
+                        f"  Reveal:  lane {attack_lane} blind draw"
+                        f"  \u2192  card {_bac.card.value} ({_bac.position})"
+                    )
+
             # Select which card to use from the chosen lane (prefer front-row)
             cards_on_lane = attack_cards[attack_lane]
             front_attacks = [ac for ac in cards_on_lane if ac.position == "front"]
@@ -432,6 +551,16 @@ class Rally:
             attacker.refill_hand()
 
             # ── SHOT SELECTION ────────────────────────────────────────────────
+            # Narrate the attack heading before shot resolution
+            _atk_eff = (f"{attack_card.value}→{effective_attack}"
+                        if effective_attack != attack_card.value else str(effective_attack))
+            _blk_eff = (f"{block_value}→{effective_block}"
+                        if effective_block != block_value else str(effective_block))
+            self._narrate(
+                f"  Resolve: {attacker.name} lane {attack_lane} {_LANE_NAMES.get(attack_lane, '')}"
+                f"  atk {_atk_eff}  vs  blk {_blk_eff}"
+            )
+
             # Dynamic tip threshold: base 3, expanded by setter ability on high set
             tip_threshold = 3
             if attacker.ability_engine:
@@ -465,6 +594,8 @@ class Rally:
             if shot == "hit" and effective_attack <= tip_threshold and not is_back_row_attack:
                 shot = atk_strat.choose_tip_or_hit(effective_attack, effective_block)
 
+            self._narrate(f"  Shot:    {shot.upper()}")
+
             if shot == "tip":
                 # ── TIP ──────────────────────────────────────────────────────
                 # Attacker tip bonus (on_tip trigger)
@@ -481,12 +612,22 @@ class Rally:
                         defender_role
                     )
                 if effective_tip_dig <= effective_tip:
-                    # Track broken play: if setter dug, next set will be broken
+                    self._narrate(
+                        f"  Dig:     {defender.name} card {dig_card.value}"
+                        + (f" (eff {effective_tip_dig})" if effective_tip_dig != dig_card.value else "")
+                        + f"  ≤ tip {effective_tip}  →  DUG"
+                    )
+                    # Tips are too fast for adjacent coverage — setter dig always breaks play
                     self._broken_play = (defender_role == PlayerRole.SETTER)
                     attacker, defender = defender, attacker
                     atk_strat, def_strat = def_strat, atk_strat
                     continue
                 else:
+                    self._narrate(
+                        f"  Dig:     {defender.name} card {dig_card.value}"
+                        + (f" (eff {effective_tip_dig})" if effective_tip_dig != dig_card.value else "")
+                        + f"  > tip {effective_tip}  →  NOT DUG"
+                    )
                     return RallyResult(
                         winner_name=attacker.name,
                         reason=(
@@ -503,15 +644,45 @@ class Rally:
                 dig_target = effective_attack
                 if attacker.ability_engine and attacker_role:
                     dig_target += attacker.ability_engine.attack_dig_threshold(attacker_role)
-                dig_card = self._phase_dig(defender, def_strat, dig_target, "normal")
-                # Determine which defender digs based on attack lane and card parity
+                # Determine defender role before cover decision
                 defender_role = get_dig_defender_role(attack_lane, attack_card.value)
+                # Cover attempt: strategy may send Libero/DS to intercept setter's zone
+                cover_threshold = _cover_threshold(defender)
+                cover_attempted = False
+                if defender_role == PlayerRole.SETTER and cover_threshold > 0:
+                    if def_strat.cover_draws_from_deck():
+                        # Blind deck flip — strategy draws top card, no hand selection
+                        if defender.deck.draw_pile_size > 0:
+                            cover_card = defender.deck.draw()
+                            defender.deck.discard(cover_card)
+                            dig_card = cover_card
+                            cover_attempted = True
+                        else:
+                            dig_card = self._phase_dig(defender, def_strat, dig_target, "normal")
+                    elif defender.hand:
+                        cover_card = def_strat.choose_cover_attempt(defender.hand, cover_threshold)
+                        if cover_card is not None:
+                            defender.play_card(cover_card)
+                            dig_card = cover_card
+                            cover_attempted = True
+                        else:
+                            dig_card = self._phase_dig(defender, def_strat, dig_target, "normal")
+                    else:
+                        dig_card = self._phase_dig(defender, def_strat, dig_target, "normal")
+                else:
+                    dig_card = self._phase_dig(defender, def_strat, dig_target, "normal")
+                # Determine which defender digs based on attack lane and card parity
                 effective_dig = dig_card.value
                 if defender.ability_engine:
                     effective_dig += defender.ability_engine.defender_dig_threshold(
                         defender_role
                     )
                 if effective_dig >= dig_target:
+                    self._narrate(
+                        f"  Dig:     {defender.name} card {dig_card.value}"
+                        + (f" (eff {effective_dig})" if effective_dig != dig_card.value else "")
+                        + f"  ≥ {dig_target}  →  ROLL DUG"
+                    )
                     if defender.ability_engine:
                         defender.ability_engine.record_dig_success(defender_role, "normal")
                         # Phase 5: DECK_SWAP_OPPONENT - Hand disruption on dig success
@@ -521,15 +692,27 @@ class Rally:
                                 highest = max(attacker.hand, key=lambda c: c.value)
                                 attacker.hand.remove(highest)
                                 attacker.deck.discard(highest)
-                                if attacker.deck.cards:
+                                if attacker.deck.draw_pile_size > 0:
                                     new_card = attacker.deck.draw()
                                     attacker.hand.append(new_card)
-                    # Track broken play: if setter dug, next set will be broken
-                    self._broken_play = (defender_role == PlayerRole.SETTER)
+                    # Broken play: setter dig unless cover was attempted and card cleared threshold
+                    if defender_role == PlayerRole.SETTER:
+                        if cover_attempted and dig_card.value >= cover_threshold:
+                            self._narrate(f"  Cover:   adjacent player reached (card {dig_card.value}) — no broken play")
+                            self._broken_play = False
+                        else:
+                            self._broken_play = True
+                    else:
+                        self._broken_play = False
                     attacker, defender = defender, attacker
                     atk_strat, def_strat = def_strat, atk_strat
                     continue
                 else:
+                    self._narrate(
+                        f"  Dig:     {defender.name} card {dig_card.value}"
+                        + (f" (eff {effective_dig})" if effective_dig != dig_card.value else "")
+                        + f"  < {dig_target}  →  NOT DUG (no chase)"
+                    )
                     return RallyResult(
                         winner_name=attacker.name,
                         reason=(
@@ -542,6 +725,7 @@ class Rally:
             else:
                 # ── HIT / SEAM ────────────────────────────────────────────────
                 outcome = resolve_attack(effective_attack, effective_block)
+                self._narrate(f"  Outcome: {outcome.name}  (atk {effective_attack} vs blk {effective_block})")
 
                 if outcome == AttackOutcomeType.STUFFED:
                     return RallyResult(
@@ -580,8 +764,16 @@ class Rally:
                         attacker, atk_strat, deflect_target, "tip"
                     )
                     if dig_card.value <= deflect_target:
+                        self._narrate(
+                            f"  Dig:     {attacker.name} card {dig_card.value}"
+                            f"  ≤ deflect {deflect_target}  →  DUG"
+                        )
                         continue
                     else:
+                        self._narrate(
+                            f"  Dig:     {attacker.name} card {dig_card.value}"
+                            f"  > deflect {deflect_target}  →  NOT DUG"
+                        )
                         return RallyResult(
                             winner_name=defender.name,
                             reason=(
@@ -596,11 +788,41 @@ class Rally:
                     dig_target = effective_attack
                     if attacker.ability_engine and attacker_role:
                         dig_target += attacker.ability_engine.attack_dig_threshold(attacker_role)
-                    dig_card = self._phase_dig(
-                        defender, def_strat, dig_target, "normal"
-                    )
-                    # Determine which defender digs based on attack lane and card parity
+                    # Determine defender role before cover decision
                     defender_role = get_dig_defender_role(attack_lane, attack_card.value)
+                    # Cover attempt: strategy may send Libero/DS to intercept setter's zone
+                    cover_threshold = _cover_threshold(defender)
+                    cover_attempted = False
+                    if defender_role == PlayerRole.SETTER and cover_threshold > 0:
+                        if def_strat.cover_draws_from_deck():
+                            # Blind deck flip — strategy draws top card, no hand selection
+                            if defender.deck.draw_pile_size > 0:
+                                cover_card = defender.deck.draw()
+                                defender.deck.discard(cover_card)
+                                dig_card = cover_card
+                                cover_attempted = True
+                            else:
+                                dig_card = self._phase_dig(
+                                    defender, def_strat, dig_target, "normal"
+                                )
+                        elif defender.hand:
+                            cover_card = def_strat.choose_cover_attempt(defender.hand, cover_threshold)
+                            if cover_card is not None:
+                                defender.play_card(cover_card)
+                                dig_card = cover_card
+                                cover_attempted = True
+                            else:
+                                dig_card = self._phase_dig(
+                                    defender, def_strat, dig_target, "normal"
+                                )
+                        else:
+                            dig_card = self._phase_dig(
+                                defender, def_strat, dig_target, "normal"
+                            )
+                    else:
+                        dig_card = self._phase_dig(
+                            defender, def_strat, dig_target, "normal"
+                        )
                     # Defender dig-threshold bonus adds to effective dig value
                     effective_dig = dig_card.value
                     if defender.ability_engine:
@@ -608,6 +830,11 @@ class Rally:
                             defender_role
                         )
                     if effective_dig >= dig_target:
+                        self._narrate(
+                            f"  Dig:     {defender.name} card {dig_card.value}"
+                            + (f" (eff {effective_dig})" if effective_dig != dig_card.value else "")
+                            + f"  ≥ {dig_target}  →  DUG"
+                        )
                         # Successful dig → record ability trigger, then transition
                         if defender.ability_engine:
                             defender.ability_engine.record_dig_success(
@@ -620,15 +847,27 @@ class Rally:
                                     highest = max(attacker.hand, key=lambda c: c.value)
                                     attacker.hand.remove(highest)
                                     attacker.deck.discard(highest)
-                                    if attacker.deck.cards:
+                                    if attacker.deck.draw_pile_size > 0:
                                         new_card = attacker.deck.draw()
                                         attacker.hand.append(new_card)
-                        # Track broken play: if setter dug, next set will be broken
-                        self._broken_play = (defender_role == PlayerRole.SETTER)
+                        # Broken play: setter dig unless cover was attempted and card cleared threshold
+                        if defender_role == PlayerRole.SETTER:
+                            if cover_attempted and dig_card.value >= cover_threshold:
+                                self._narrate(f"  Cover:   adjacent player reached (card {dig_card.value}) — no broken play")
+                                self._broken_play = False
+                            else:
+                                self._broken_play = True
+                        else:
+                            self._broken_play = False
                         attacker, defender = defender, attacker
                         atk_strat, def_strat = def_strat, atk_strat
                         continue
                     else:
+                        self._narrate(
+                            f"  Dig:     {defender.name} card {dig_card.value}"
+                            + (f" (eff {effective_dig})" if effective_dig != dig_card.value else "")
+                            + f"  < {dig_target}  →  NOT DUG — chase needed"
+                        )
                         # Check no_chase before starting chase
                         if (
                             attacker.ability_engine and attacker_role
@@ -710,6 +949,9 @@ class Rally:
         running_total += extra_bonus + (
             team.ability_engine.chase_bonus() if team.ability_engine else 0
         )
+        self._narrate(
+            f"\n  Chase:   {team.name}  need {target_value}  starting at {running_total}"
+        )
         # Attempt 1
         if team.hand:
             card1 = strat.choose_chase_card(team.hand, running_total, target_value)
@@ -717,8 +959,10 @@ class Rally:
         else:
             card1 = team.blind_draw()
         running_total += card1.value
+        self._narrate(f"  Chase 1: card {card1.value}  →  total {running_total} / {target_value}")
 
         if running_total >= target_value:
+            self._narrate(f"  Chase:   SUCCEEDED → armed attack")
             lane = strat.choose_armed_attack_lane(team.hand)
             return ChaseResult(outcome=ChaseOutcome.ARMED_ATTACK, armed_lane=lane)
 
@@ -729,10 +973,13 @@ class Rally:
         else:
             card2 = team.blind_draw()
         running_total += card2.value
+        self._narrate(f"  Chase 2: card {card2.value}  →  total {running_total} / {target_value}")
 
         if running_total >= target_value:
+            self._narrate(f"  Chase:   SUCCEEDED → free ball")
             return ChaseResult(outcome=ChaseOutcome.FREE_BALL)
 
+        self._narrate(f"  Chase:   FAILED  (total {running_total} < {target_value})")
         return ChaseResult(outcome=ChaseOutcome.FAILED)
 
     def _phase_armed_attack(
@@ -792,7 +1039,7 @@ class Rally:
         self, team: Team, strat: BaseStrategy, set_value_delta: int = 0
     ) -> Tuple[Card, SetTemplate]:
         if team.hand:
-            card = strat.choose_set_card(team.hand)
+            card = strat.choose_set_card(team.hand, broken_play=self._broken_play)
             team.play_card(card)
         else:
             card = team.deck.draw()
@@ -822,30 +1069,72 @@ class Rally:
     ) -> Dict[int, List[AttackCard]]:
         """
         Place attack cards according to template.
-        Returns {lane: [AttackCard]} where each lane can have multiple cards (front + back).
+
+        Hand cards are placed first (known values).  If the hand does not fill
+        all available slots up to template.max_attackers, the remaining slots
+        are filled with blind draws straight from the deck — face-down cards
+        whose values are hidden from both strategies during block commit and
+        lane commitment.  Values are revealed in the narrative after the
+        attacker locks in a lane.
+
+        Returns {lane: [AttackCard]} where each lane can have multiple cards
+        (front + back), some potentially with blind=True.
         """
+        attack_cards: Dict[int, List[AttackCard]] = {}
+
         if team.hand:
+            # Exchange card ability: before committing, optionally swap worst hand
+            # card for the deck top (fires when any front-row player has the ability)
+            if team.ability_engine and team.ability_engine.exchange_card_eligible():
+                deck_top = team.deck.peek()
+                if deck_top is not None:
+                    swap_out = strat.choose_exchange_card(team.hand, deck_top)
+                    if swap_out is not None and swap_out in team.hand:
+                        team.play_card(swap_out)          # removes from hand, discards
+                        new_card = team.deck.draw()
+                        team.hand.append(new_card)
             placements = strat.choose_hit_cards(team.hand, template)
             cards_to_commit = [card for _, card, _ in placements]
             team.commit_cards(cards_to_commit)
+            for lane, card, position in placements:
+                attack_cards.setdefault(lane, []).append(
+                    AttackCard(card=card, position=position, blind=False)
+                )
+            placed = len(placements)
         else:
-            # No hand: blindly draw one card and place front-row on first available lane
-            card = team.deck.draw()
-            first_lane = template.front_lanes[0] if template.front_lanes else 1
-            placements = [(first_lane, card, "front")]
-            # card is already outside the hand, no commit needed
-        
-        # Organize by lane
-        attack_cards: Dict[int, List[AttackCard]] = {}
-        for lane, card, position in placements:
-            if lane not in attack_cards:
-                attack_cards[lane] = []
-            attack_cards[lane].append(AttackCard(card=card, position=position))
-        
-        # Front+back matching now handled in comprehensive matching system (after block commit)
-        # This allows proper rally winner determination based on match type
-        
-        # No refill here: attacker refills in the main loop after discard_many
+            placed = 0  # no hand — all slots filled with blind draws below
+
+        # ── BLIND DRAWS ────────────────────────────────────────────────────
+        # If hand placements didn't reach max_attackers, fill remaining slots
+        # with cards drawn directly from the deck (face-down threats).
+        # Priority: front lanes first, then back lanes not already covered,
+        # then back lanes that share a lane with a front placement.
+        if placed < template.max_attackers:
+            used_slots: set = {
+                (lane, ac.position)
+                for lane, acs in attack_cards.items()
+                for ac in acs
+            }
+            front_set = set(template.front_lanes)
+            candidates: List[Tuple[int, str]] = []
+            for lane in sorted(template.front_lanes):
+                if (lane, "front") not in used_slots:
+                    candidates.append((lane, "front"))
+            for lane in sorted(l for l in template.back_lanes if l not in front_set):
+                if (lane, "back") not in used_slots:
+                    candidates.append((lane, "back"))
+            for lane in sorted(l for l in template.back_lanes if l in front_set):
+                if (lane, "back") not in used_slots:
+                    candidates.append((lane, "back"))
+
+            for lane, position in candidates[: template.max_attackers - placed]:
+                blind_card = team.deck.draw()
+                attack_cards.setdefault(lane, []).append(
+                    AttackCard(card=blind_card, position=position, blind=True)
+                )
+
+        # Front+back matching is handled in the comprehensive matching system
+        # (after block commit) — blind cards participate with their actual values.
         return attack_cards
 
     def _phase_block_commit(
@@ -858,12 +1147,31 @@ class Rally:
           block_cards  : {lane: [Card]} — actual cards placed for matching checks
         """
         if team.hand:
-            placement = strat.choose_block_cards(team.hand, attack_lanes)
+            # Compute wild_block threshold (max across all blocking roles)
+            wild_threshold = 0
+            if team.ability_engine:
+                for role in (PlayerRole.OH, PlayerRole.MB, PlayerRole.OPP):
+                    wild_threshold = max(
+                        wild_threshold,
+                        team.ability_engine.wild_block_threshold(role)
+                    )
+            wide_spread_threshold = 0
+            if team.ability_engine:
+                for role in (PlayerRole.OH, PlayerRole.MB, PlayerRole.OPP):
+                    wide_spread_threshold = max(
+                        wide_spread_threshold,
+                        team.ability_engine.wide_spread_bonus(role)
+                    )
+            placement = strat.choose_block_cards(team.hand, attack_lanes, wild_threshold, wide_spread_threshold)
             all_block_cards = [c for cards in placement.values() for c in cards]
             team.commit_cards(all_block_cards)
         else:
+            # No-hand team: flip one card per attacked lane, lowest lane to highest.
             placement = {}
-            all_block_cards = []
+            for lane in sorted(attack_lanes):
+                card = team.deck.draw()
+                placement[lane] = [card]
+            all_block_cards = [c for cards in placement.values() for c in cards]
 
         # Discard block cards; no refill (blocking does not send ball over net).
         team.discard_many(all_block_cards)
@@ -885,6 +1193,15 @@ class Rally:
             if adj:
                 for adj_lane in (1, 3):
                     block_layout[adj_lane] = block_layout.get(adj_lane, 0) + adj
+            # Wide spread bonus: fires when |card1-card2| >= N, adds +N to block sum
+            for lane in list(block_layout):
+                role = LANE_TO_ROLE.get(lane)
+                if role:
+                    wsp = team.ability_engine.wide_spread_bonus(role)
+                    if wsp:
+                        lane_cards = placement.get(lane, [])
+                        if len(lane_cards) == 2 and abs(lane_cards[0].value - lane_cards[1].value) >= wsp:
+                            block_layout[lane] = block_layout[lane] + wsp
 
         return block_layout, block_max, placement
 

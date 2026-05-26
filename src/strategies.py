@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from .cards import Card
 from .players import GridPlayer
@@ -28,8 +28,10 @@ class BaseStrategy(ABC):
         """Return card to play for receive. Success if card.value >= serve_value."""
 
     @abstractmethod
-    def choose_set_card(self, hand: List[Card]) -> Card:
-        """Return card to play as the set. Value determines eligible hitter lanes."""
+    def choose_set_card(self, hand: List[Card], broken_play: bool = False) -> Card:
+        """Return card to play as the set. Value determines eligible hitter lanes.
+        broken_play=True means a non-setter is setting (restricted templates).
+        """
 
     @abstractmethod
     def choose_hit_cards(
@@ -52,7 +54,8 @@ class BaseStrategy(ABC):
 
     @abstractmethod
     def choose_block_cards(
-        self, hand: List[Card], attack_lanes: List[int]
+        self, hand: List[Card], attack_lanes: List[int], wild_threshold: int = 0,
+        wide_spread_threshold: int = 0
     ) -> Dict[int, List[Card]]:
         """
         Return {lane: [cards]} for block placement across lanes 1–3.
@@ -60,6 +63,8 @@ class BaseStrategy(ABC):
         - Block value for a lane = sum of cards on that lane.
         - May double a lane (2 cards → summed value).
         - May leave lanes unblocked.
+        - wild_threshold > 0: cards with value <= wild_threshold may go to any lane.
+        - wide_spread_threshold > 0: if |card1-card2| >= threshold, block gets +threshold bonus.
         """
 
     @abstractmethod
@@ -105,6 +110,37 @@ class BaseStrategy(ABC):
         successful first-chase.  No set card is played; only this lane is open.
         """
 
+    @abstractmethod
+    def choose_exchange_card(
+        self, hand: List[Card], deck_top: Card
+    ) -> Optional[Card]:
+        """
+        Called before hit placement when the team has exchange_card ability.
+        Return a card from hand to discard in exchange for deck_top, or None
+        to decline the exchange.
+        """
+
+    @abstractmethod
+    def choose_cover_attempt(self, hand: List[Card], threshold: int) -> Optional[Card]:
+        """
+        Called when a kill or roll-shot dig lands in the setter's zone and the
+        team has an eligible Libero or DS who could intercept.
+
+        Return a card to use for the cover attempt — that same card also serves
+        as the dig card.  Return None to skip coverage (setter digs, broken play).
+
+        Cover succeeds if the returned card's value >= threshold.
+        Only called when cover_draws_from_deck() returns False.
+        """
+
+    def cover_draws_from_deck(self) -> bool:
+        """
+        Return True if this strategy flips the top card of the deck for cover
+        instead of selecting from the hand.  Use for strategies that do not
+        maintain or optimize a hand (e.g. Dummy).  Default: False.
+        """
+        return False
+
 
 class RandomStrategy(BaseStrategy):
     """All decisions made uniformly at random within legal constraints."""
@@ -120,7 +156,7 @@ class RandomStrategy(BaseStrategy):
     def choose_receive_card(self, hand: List[Card], serve_value: int) -> Card:
         return self._rng.choice(hand)
 
-    def choose_set_card(self, hand: List[Card]) -> Card:
+    def choose_set_card(self, hand: List[Card], broken_play: bool = False) -> Card:
         return self._rng.choice(hand)
 
     def choose_hit_cards(
@@ -154,7 +190,8 @@ class RandomStrategy(BaseStrategy):
         return result
 
     def choose_block_cards(
-        self, hand: List[Card], attack_lanes: List[int]
+        self, hand: List[Card], attack_lanes: List[int], wild_threshold: int = 0,
+        wide_spread_threshold: int = 0
     ) -> Dict[int, List[Card]]:
         if not hand or not attack_lanes:
             return {}
@@ -199,134 +236,66 @@ class RandomStrategy(BaseStrategy):
     def choose_armed_attack_lane(self, hand: List[Card]) -> int:
         return self._rng.choice([1, 3])
 
+    def choose_exchange_card(
+        self, hand: List[Card], deck_top: Card
+    ) -> Optional[Card]:
+        return None  # Random strategy never exchanges
+
+    def choose_cover_attempt(self, hand: List[Card], threshold: int) -> Optional[Card]:
+        # 50/50 whether to attempt; if yes, pick a random card
+        if not hand or not self._rng.choice([True, False]):
+            return None
+        return self._rng.choice(hand)
+
 
 class DummyStrategy(BaseStrategy):
     """
-    Fixed deterministic baseline opponent.
+    Truly blind opponent — no hand optimization whatsoever.
 
-    Attack targeting:
-      even card value → lane 2 (middle / MB)
-      odd  card value → side lane (1 or 3, never 2)
+    Every card decision uses hand[0] (the top card as drawn, no sorting or
+    selection).  Non-card decisions (lane, tip/hit) use the top card's parity
+    as a tie-breaker so behavior remains deterministic and testable.
 
-    Serve targeting:
-      even card value → first eligible receiver
-      odd  card value → last  eligible receiver
-
-    Blocking: always double-commits to lane 2 (middle priority).
-    Tipping:  always tips when the game engine offers the choice.
-    Receiving/digging: highest card for normal digs; lowest for tip digs.
+    Cover attempts draw the top card of the deck directly
+    (cover_draws_from_deck() == True), bypassing the hand entirely.
     """
 
     # ── Serve ──────────────────────────────────────────────────────────────
     def choose_serve(self, hand: List[Card], eligible_receivers: List[GridPlayer]) -> Tuple[Card, GridPlayer]:
-        card = max(hand, key=lambda c: c.value)
+        card = hand[0]
         receiver = (eligible_receivers[0] if card.value % 2 == 0
                     else eligible_receivers[-1])
         return card, receiver
 
     # ── Receive ────────────────────────────────────────────────────────────
     def choose_receive_card(self, hand: List[Card], serve_value: int) -> Card:
-        return max(hand, key=lambda c: c.value)
+        return hand[0]
 
     # ── Set ────────────────────────────────────────────────────────────────
-    def choose_set_card(self, hand: List[Card]) -> Card:
-        return max(hand, key=lambda c: c.value)
+    def choose_set_card(self, hand: List[Card], broken_play: bool = False) -> Card:
+        return hand[0]
 
     # ── Hit ────────────────────────────────────────────────────────────────
     def choose_hit_cards(self, hand: List[Card], template: "SetTemplate") -> List[Tuple[int, Card, str]]:
-        # Phase 3: Deterministic front + back-row attacks with odd/even logic
-        evens = sorted([c for c in hand if c.value % 2 == 0], key=lambda c: -c.value)
-        odds  = sorted([c for c in hand if c.value % 2 == 1], key=lambda c: -c.value)
-
-        result: List[Tuple[int, Card, str]] = []
-        
-        # First, fill front-row lanes using odd/even logic
-        for lane in sorted(template.front_lanes):
-            if len(result) >= template.max_attackers:
-                break
-            
-            if lane == 2:
-                pool, fallback = evens, odds
-            else:
-                pool, fallback = odds, evens
-            
-            if pool:
-                result.append((lane, pool.pop(0), "front"))
-            elif fallback:
-                result.append((lane, fallback.pop(0), "front"))
-        
-        # Then, fill back-row lanes with remaining high cards (if space available)
-        for lane in sorted(template.back_lanes):
-            if len(result) >= template.max_attackers:
-                break
-            
-            # Use same logic: lane 2 prefers evens, sides prefer odds
-            if lane == 2:
-                pool, fallback = evens, odds
-            else:
-                pool, fallback = odds, evens
-            
-            if pool:
-                result.append((lane, pool.pop(0), "back"))
-            elif fallback:
-                result.append((lane, fallback.pop(0), "back"))
-        
-        # If still not at max, fill any remaining slots with leftover cards
-        if len(result) < template.max_attackers:
-            used_ids = {id(t[1]) for t in result}
-            remaining = sorted([c for c in hand if id(c) not in used_ids], key=lambda c: -c.value)
-            
-            # Try to add more back-row attacks if available
-            assigned_lanes = {(t[0], t[2]) for t in result}  # (lane, position) pairs
-            for lane in template.back_lanes:
-                if len(result) >= template.max_attackers or not remaining:
-                    break
-                if (lane, "back") not in assigned_lanes:
-                    result.append((lane, remaining.pop(0), "back"))
-
-        return result
+        # Blind: use the top card on the first available lane
+        if template.front_lanes and hand:
+            return [(template.front_lanes[0], hand[0], "front")]
+        if template.back_lanes and hand:
+            return [(template.back_lanes[0], hand[0], "back")]
+        return []
 
     # ── Block ──────────────────────────────────────────────────────────────
-    def choose_block_cards(self, hand: List[Card], attack_lanes: List[int]) -> Dict[int, List[Card]]:
+    def choose_block_cards(self, hand: List[Card], attack_lanes: List[int], wild_threshold: int = 0,
+                           wide_spread_threshold: int = 0) -> Dict[int, List[Card]]:
         if not hand or not attack_lanes:
             return {}
-        sorted_hand = sorted(hand, key=lambda c: -c.value)
-        
-        # Determine priority lane for double-block
-        if len(attack_lanes) == 1:
-            # Only 1 lane attacked: always double-block it
-            primary = attack_lanes[0]
-        else:
-            # 2 lanes attacked: use top 3 block cards' odd/even majority
-            top_three = sorted_hand[:min(3, len(sorted_hand))]
-            odd_count = sum(1 for c in top_three if c.value % 2 == 1)
-            even_count = len(top_three) - odd_count
-            
-            if odd_count > even_count:
-                # Majority odd: double-block lane 2 if attacked, else lowest lane
-                primary = 2 if 2 in attack_lanes else min(attack_lanes)
-            else:
-                # Majority even (or tie): double-block lowest attacked lane
-                primary = min(attack_lanes)
-        
-        # Double-block the primary lane, single-block any remaining attack lanes
-        result: Dict[int, List[Card]] = {primary: sorted_hand[:min(2, len(sorted_hand))]}
-        others = [l for l in attack_lanes if l != primary]
-        for i, lane in enumerate(others):
-            card_idx = 2 + i
-            if card_idx < len(sorted_hand):
-                result[lane] = [sorted_hand[card_idx]]
-        return result
+        # Blind: put the top card on the first attacked lane
+        return {attack_lanes[0]: [hand[0]]}
 
     # ── Attack lane choice ─────────────────────────────────────────────────
     def choose_attack_lane(self, attack_cards: Dict[int, Card], block_layout: Dict[int, int]) -> int:
-        # Choose lane with best differential (attack value - block value)
-        def score_lane(lane: int) -> int:
-            attack_val = attack_cards[lane].value
-            block_val = block_layout.get(lane, 0)
-            return attack_val - block_val
-        
-        return max(attack_cards, key=score_lane)
+        # Blind: pick the first lane available
+        return list(attack_cards.keys())[0]
 
     # ── Tip or hit ─────────────────────────────────────────────────────────
     def choose_tip_or_hit(self, attack_value: int, block_value: int) -> str:
@@ -334,19 +303,28 @@ class DummyStrategy(BaseStrategy):
 
     # ── Dig ────────────────────────────────────────────────────────────────
     def choose_dig_card(self, hand: List[Card], target_value: int, dig_type: str) -> Card:
-        # Tip dig: need card <= target → play lowest
-        if dig_type == "tip":
-            return min(hand, key=lambda c: c.value)
-        # Normal/deflect dig: need card >= target → play highest
-        return max(hand, key=lambda c: c.value)
+        return hand[0]
 
     # ── Chase ──────────────────────────────────────────────────────────────
     def choose_chase_card(self, hand: List[Card], running_total: int, target_value: int) -> Card:
-        return max(hand, key=lambda c: c.value)
+        return hand[0]
 
     # ── Armed attack ───────────────────────────────────────────────────────
     def choose_armed_attack_lane(self, hand: List[Card]) -> int:
-        return 1  # always OH side
+        return 1
+
+    # ── Exchange ───────────────────────────────────────────────────────────
+    def choose_exchange_card(
+        self, hand: List[Card], deck_top: Card
+    ) -> Optional[Card]:
+        return None  # Dummy never exchanges
+
+    # ── Cover ──────────────────────────────────────────────────────────────
+    def cover_draws_from_deck(self) -> bool:
+        return True  # Blind deck flip — no hand selection
+
+    def choose_cover_attempt(self, hand: List[Card], threshold: int) -> Optional[Card]:
+        return None  # Not called when cover_draws_from_deck() is True
 
 
 class SmartStrategy(BaseStrategy):
@@ -384,18 +362,28 @@ class SmartStrategy(BaseStrategy):
         return min(hand, key=lambda c: c.value)
 
     # ── Set ────────────────────────────────────────────────────────────────
-    def choose_set_card(self, hand: List[Card]) -> Card:
-        # Prefer setting with mid-high cards (6-9) for good lane options
-        # Avoid wasting 10s on sets; save for attacks/blocks
-        # Avoid low cards (1-3) that limit attack options
+    def choose_set_card(self, hand: List[Card], broken_play: bool = False) -> Card:
+        if broken_play:
+            # Broken play templates:
+            #   1-3  → max_attackers=2  (decent)
+            #   4-7  → max_attackers=1  (worst: single attacker only)
+            #   8-10 → max_attackers=2  (decent)
+            # Strongly avoid mid-range cards; prefer high (8-10) then low (1-3).
+            high = [c for c in hand if c.value >= 8]
+            if high:
+                return max(high, key=lambda c: c.value)
+            low = [c for c in hand if c.value <= 3]
+            if low:
+                return max(low, key=lambda c: c.value)
+            # Stuck with 4-7 — play lowest to minimise disruption
+            return min(hand, key=lambda c: c.value)
+        # Normal play: prefer mid-high cards (6-9) for good lane options
         mid_high = [c for c in hand if 6 <= c.value <= 9]
         if mid_high:
             return max(mid_high, key=lambda c: c.value)
-        # If no mid-high, prefer any card 4-9
         decent = [c for c in hand if 4 <= c.value <= 9]
         if decent:
             return max(decent, key=lambda c: c.value)
-        # Otherwise play lowest to save better cards
         return min(hand, key=lambda c: c.value)
 
     # ── Hit ────────────────────────────────────────────────────────────────
@@ -462,8 +450,11 @@ class SmartStrategy(BaseStrategy):
         if 2 in template.front_lanes and 2 not in preferred_front:
             attack_plan.append((2, "front"))
         
-        # Add back-row lanes (create multi-lane pressure)
-        for lane in sorted(template.back_lanes):
+        # Add back-row lanes — new distinct lanes first, then shared lanes
+        front_lane_set = set(template.front_lanes)
+        for lane in sorted(l for l in template.back_lanes if l not in front_lane_set):
+            attack_plan.append((lane, "back"))
+        for lane in sorted(l for l in template.back_lanes if l in front_lane_set):
             attack_plan.append((lane, "back"))
         
         # Filter out already-used slots from tactical matching
@@ -474,19 +465,33 @@ class SmartStrategy(BaseStrategy):
         for lane, position in attack_plan:
             if len(result) >= template.max_attackers or not available:
                 break
-            
+
+            # MATCHING GUARD: never place same value front+back on same lane
+            # (attacker-attacker match = defender wins — costs us the rally)
+            front_val_on_lane = next(
+                (t[1].value for t in result if t[0] == lane and t[2] == "front"),
+                None
+            )
+
             # TACTICAL: Target opponent's setter with odd cards on lanes 1/2
             if lane in (1, 2):
                 # Prefer odd cards to force setter dig
-                odd_cards = [c for c in available if c.value % 2 == 1]
-                if odd_cards:
-                    card = odd_cards[0]
+                candidates = [c for c in available if c.value % 2 == 1]
+                if position == "back" and front_val_on_lane is not None:
+                    candidates = [c for c in candidates if c.value != front_val_on_lane]
+                if not candidates:
+                    # Fall back to any available card, still avoiding the match value
+                    candidates = [c for c in available
+                                  if position != "back" or front_val_on_lane is None
+                                  or c.value != front_val_on_lane]
+                card = candidates[0] if candidates else available[0]
+            else:  # lane 3
+                if position == "back" and front_val_on_lane is not None:
+                    safe = [c for c in available if c.value != front_val_on_lane]
+                    card = safe[0] if safe else available[0]
                 else:
                     card = available[0]
-            else:  # lane 3
-                # Any strong card works (odd→DS, even→Libero)
-                card = available[0]
-            
+
             result.append((lane, card, position))
             available.remove(card)
         
@@ -494,70 +499,83 @@ class SmartStrategy(BaseStrategy):
 
     # ── Block ──────────────────────────────────────────────────────────────
     def choose_block_cards(
-        self, hand: List[Card], attack_lanes: List[int]
+        self, hand: List[Card], attack_lanes: List[int], wild_threshold: int = 0,
+        wide_spread_threshold: int = 0
     ) -> Dict[int, List[Card]]:
         if not hand or not attack_lanes:
             return {}
-        
+
         sorted_hand = sorted(hand, key=lambda c: -c.value)
-        
-        # TACTICAL: Protect our setter from odd attacks on lanes 1/2
-        # Check our top 3 block cards to anticipate opponent's likely attack targets
-        top_three = sorted_hand[:min(3, len(sorted_hand))]
-        odd_count = sum(1 for c in top_three if c.value % 2 == 1)
-        
-        # Identify setter-vulnerable lanes (1 and 2 for odd attacks)
-        setter_lanes = [l for l in attack_lanes if l in (1, 2)]
-        
         result: Dict[int, List[Card]] = {}
-        
-        if len(attack_lanes) == 1:
-            # Single lane attacked: double-block it
-            result[attack_lanes[0]] = sorted_hand[:min(2, len(sorted_hand))]
-        elif len(attack_lanes) == 2:
-            # Prioritize setter-vulnerable lanes if we hold odd cards
-            if setter_lanes and odd_count > 0:
-                # Protect setter: double-block setter-vulnerable lane
-                primary = setter_lanes[0]
+
+        # DIVERSE BLOCK TACTIC: avoid same-value pairs (they cancel).
+        # When wide_spread_threshold > 0, also try to find a pair that differs
+        # by at least the threshold to earn the wide_spread_bonus.
+        available = list(range(len(sorted_hand)))  # indices into sorted_hand
+
+        for lane in attack_lanes:
+            if not available:
+                break
+            first_idx = available[0]
+            first_val = sorted_hand[first_idx].value
+
+            if wide_spread_threshold > 0:
+                # Look for a pair that earns the spread bonus.
+                # Compare effective value: (sum + bonus) vs pure sum.
+                spread_idx = next(
+                    (i for i in available[1:]
+                     if abs(sorted_hand[i].value - first_val) >= wide_spread_threshold),
+                    None
+                )
+                diverse_idx = next(
+                    (i for i in available[1:] if sorted_hand[i].value != first_val),
+                    None
+                )
+                if spread_idx is not None and diverse_idx is not None:
+                    spread_eff = first_val + sorted_hand[spread_idx].value + wide_spread_threshold
+                    plain_eff  = first_val + sorted_hand[diverse_idx].value
+                    if spread_eff >= plain_eff:
+                        result[lane] = [sorted_hand[first_idx], sorted_hand[spread_idx]]
+                        available.remove(first_idx); available.remove(spread_idx)
+                    else:
+                        result[lane] = [sorted_hand[first_idx], sorted_hand[diverse_idx]]
+                        available.remove(first_idx); available.remove(diverse_idx)
+                elif spread_idx is not None:
+                    result[lane] = [sorted_hand[first_idx], sorted_hand[spread_idx]]
+                    available.remove(first_idx); available.remove(spread_idx)
+                elif diverse_idx is not None:
+                    result[lane] = [sorted_hand[first_idx], sorted_hand[diverse_idx]]
+                    available.remove(first_idx); available.remove(diverse_idx)
+                else:
+                    result[lane] = [sorted_hand[first_idx]]
+                    available.remove(first_idx)
             else:
-                # Standard: double-block first lane
-                primary = attack_lanes[0]
-            
-            result[primary] = sorted_hand[:min(2, len(sorted_hand))]
-            other = [l for l in attack_lanes if l != primary][0]
-            if len(sorted_hand) > 2:
-                result[other] = sorted_hand[2:min(4, len(sorted_hand))]
-        else:
-            # Three lanes: prioritize setter protection if we hold odd cards
-            if setter_lanes and odd_count >= 2:
-                # Strong odd presence: protect setter lanes
-                primary = min(setter_lanes)  # lanes 1 or 2
-                result[primary] = sorted_hand[:min(2, len(sorted_hand))]
-                remaining = [l for l in attack_lanes if l != primary]
-                if len(sorted_hand) > 2:
-                    result[remaining[0]] = [sorted_hand[2]]
-                if len(sorted_hand) > 3:
-                    result[remaining[1]] = [sorted_hand[3]]
-            else:
-                # Spread blocks evenly
-                result[attack_lanes[0]] = sorted_hand[:min(2, len(sorted_hand))]
-                if len(sorted_hand) > 2:
-                    result[attack_lanes[1]] = [sorted_hand[2]]
-                if len(sorted_hand) > 3:
-                    result[attack_lanes[2]] = [sorted_hand[3]]
-        
+                diverse_idx = next(
+                    (i for i in available[1:] if sorted_hand[i].value != first_val),
+                    None
+                )
+                if diverse_idx is not None:
+                    result[lane] = [sorted_hand[first_idx], sorted_hand[diverse_idx]]
+                    available.remove(first_idx)
+                    available.remove(diverse_idx)
+                else:
+                    # All remaining cards share a value — single block to avoid cancellation
+                    result[lane] = [sorted_hand[first_idx]]
+                    available.remove(first_idx)
+
         return result
 
     # ── Attack lane choice ─────────────────────────────────────────────────
     def choose_attack_lane(
         self, attack_cards: Dict[int, Card], block_layout: Dict[int, int]
     ) -> int:
-        # Choose lane with best (attack - block) differential
-        best_lane = max(
-            attack_cards.keys(),
-            key=lambda l: attack_cards[l].value - block_layout.get(l, 0)
-        )
-        return best_lane
+        def score(lane: int) -> int:
+            return attack_cards[lane].value - block_layout.get(lane, 0)
+
+        # Prefer lanes with known values; blind draws have value=0
+        known = {l: c for l, c in attack_cards.items() if c.value > 0}
+        pool = known if known else attack_cards
+        return max(pool, key=score)
 
     # ── Tip or hit ─────────────────────────────────────────────────────────
     def choose_tip_or_hit(self, attack_value: int, block_value: int) -> str:
@@ -603,3 +621,25 @@ class SmartStrategy(BaseStrategy):
     def choose_armed_attack_lane(self, hand: List[Card]) -> int:
         # Armed attack on sides only. Pick randomly to avoid pattern
         return self._rng.choice([1, 3])
+
+    # ── Exchange card ───────────────────────────────────────────────────
+    def choose_exchange_card(
+        self, hand: List[Card], deck_top: Card
+    ) -> Optional[Card]:
+        # Swap out the worst hand card if deck top is significantly better
+        worst = min(hand, key=lambda c: c.value)
+        if deck_top.value >= worst.value + 3:
+            return worst
+        return None
+
+    def choose_cover_attempt(self, hand: List[Card], threshold: int) -> Optional[Card]:
+        # Smart always tries when a qualifying card exists — use the lowest one
+        # (keeps high cards available for attack/block on the next exchange).
+        # If no card clears the threshold, skip coverage and let choose_dig_card
+        # pick the optimal dig card instead.
+        if not hand:
+            return None
+        qualifying = [c for c in hand if c.value >= threshold]
+        if qualifying:
+            return min(qualifying, key=lambda c: c.value)
+        return None

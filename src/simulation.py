@@ -18,8 +18,12 @@ class SimStats:
     wins: Dict[str, int]
     total_rallies: int
     total_exchanges: int
-    score_distribution: List[Tuple[int, int]]   # (score_a, score_b) per game
-    reason_counts: Dict[str, int]               # tally of rally end-reasons
+    score_distribution: List[Tuple[int, int]]     # (score_a, score_b) per game
+    reason_counts: Dict[str, int]                 # tally of rally end-reasons
+    scored_by: Dict[str, Dict[str, int]] = field(default_factory=dict)
+    # scored_by[team][category] = rally-win count
+    # Categories: kills, aces, block_kills, block_reads, tips_free_balls,
+    #             deflect_outs, opp_errors, other
 
     @property
     def win_rates(self) -> Dict[str, float]:
@@ -33,6 +37,25 @@ class SimStats:
     def avg_exchanges_per_rally(self) -> float:
         return self.total_exchanges / max(self.total_rallies, 1)
 
+    def rally_wins(self, team: str) -> int:
+        return sum(self.scored_by.get(team, {}).values())
+
+    def rally_losses(self, team: str) -> int:
+        return self.total_rallies - self.rally_wins(team)
+
+    def point_scoring_efficiency(self, team: str) -> float:
+        """(Points Scored - Points Lost) / Total Attempts  (article formula)."""
+        won  = self.rally_wins(team)
+        lost = self.rally_losses(team)
+        total = won + lost
+        return (won - lost) / total if total > 0 else 0.0
+
+    def win_loss_efficiency_ratio(self, team: str) -> float:
+        """Points Scored / Points Lost  (article formula)."""
+        won  = self.rally_wins(team)
+        lost = self.rally_losses(team)
+        return won / lost if lost > 0 else float('inf')
+
     def summary(self) -> str:
         lines = [
             f"{'─' * 40}",
@@ -45,6 +68,39 @@ class SimStats:
         lines += [
             f"  Avg rallies/game   : {self.avg_rallies_per_game:.1f}",
             f"  Avg exchanges/rally: {self.avg_exchanges_per_rally:.2f}",
+            f"{'─' * 40}",
+        ]
+
+        # ── Point-Scoring Efficiency (article metrics) ───────────────────────
+        _CAT_LABELS = [
+            ("kills",          "Kills"),
+            ("aces",           "Aces"),
+            ("block_kills",    "Block kills"),
+            ("block_reads",    "Block reads"),
+            ("tips_free_balls","Tips / free balls"),
+            ("deflect_outs",   "Deflect-outs (draw-in)"),
+            ("opp_errors",     "Opp. errors"),
+            ("other",          "Other"),
+        ]
+        lines.append("  Point-Scoring Efficiency (per rally):")
+        for name in self.wins:
+            won    = self.rally_wins(name)
+            lost   = self.rally_losses(name)
+            pse    = self.point_scoring_efficiency(name)
+            ratio  = self.win_loss_efficiency_ratio(name)
+            pse_str  = f"{pse:+.1%}"
+            ratio_str = f"{ratio:.2f}x" if ratio != float('inf') else "∞"
+            lines.append(
+                f"    {name:<20}  {won:>6} scored / {lost:>6} lost"
+                f"   PSE {pse_str}   eff ratio {ratio_str}"
+            )
+            cats = self.scored_by.get(name, {})
+            total_scored = max(won, 1)
+            for key, label in _CAT_LABELS:
+                cnt = cats.get(key, 0)
+                if cnt:
+                    lines.append(f"      {label:<25}: {cnt:>6}  ({cnt/total_scored:.1%})")
+        lines += [
             f"{'─' * 40}",
             "  Rally endings (all types):",
         ]
@@ -74,6 +130,8 @@ class Simulation:
         engine_b: Optional[AbilityEngine] = None,
         name_a: str = "Team A",
         name_b: str = "Team B",
+        use_hand_a: bool = True,
+        use_hand_b: bool = True,
     ) -> None:
         self._strat_a   = strategy_a
         self._strat_b   = strategy_b
@@ -83,6 +141,8 @@ class Simulation:
         self._engine_b  = engine_b
         self._name_a    = name_a
         self._name_b    = name_b
+        self._use_hand_a = use_hand_a
+        self._use_hand_b = use_hand_b
 
     def _child_rng(self) -> random.Random:
         return random.Random(self._master_rng.randint(0, 2**31 - 1))
@@ -94,9 +154,14 @@ class Simulation:
         score_dist: List[Tuple[int, int]] = []
         reason_counts: Counter = Counter()
 
+        scored_by: Dict[str, Dict[str, int]] = {
+            self._name_a: Counter(),
+            self._name_b: Counter(),
+        }
+
         for _ in range(self._n_games):
-            team_a = Team(self._name_a, self._child_rng())
-            team_b = Team(self._name_b, self._child_rng())
+            team_a = Team(self._name_a, self._child_rng(), use_hand=self._use_hand_a)
+            team_b = Team(self._name_b, self._child_rng(), use_hand=self._use_hand_b)
             # Attach ability engines (reset per-game state first)
             if self._engine_a:
                 self._engine_a.reset()
@@ -112,8 +177,10 @@ class Simulation:
             total_rallies   += result.total_rallies
             total_exchanges += sum(r.rally_length for r in result.rally_results)
             for r in result.rally_results:
-                # Bucket the reason to a short category for readability
                 reason_counts[_categorise_reason(r.reason)] += 1
+                cat = _score_category(r.reason)
+                if r.winner_name in scored_by:
+                    scored_by[r.winner_name][cat] += 1
 
         return SimStats(
             n_games=self._n_games,
@@ -122,16 +189,19 @@ class Simulation:
             total_exchanges=total_exchanges,
             score_distribution=score_dist,
             reason_counts=dict(reason_counts),
+            scored_by={k: dict(v) for k, v in scored_by.items()},
         )
 
 
 def _categorise_reason(reason: str) -> str:
-    """Map a detailed rally reason string to a short category label."""
+    """Map a detailed rally reason string to a short display label."""
     lower = reason.lower()
     if "serve ace" in lower and "chase failed" in lower:
         return "Serve ace (chase failed)"
     if "serve ace" in lower:
         return "Serve ace"
+    if "block read single attack lane" in lower:
+        return "Block read (single lane)"
     if "stuffed" in lower:
         return "Stuffed"
     if "deflect not dug" in lower:
@@ -145,3 +215,26 @@ def _categorise_reason(reason: str) -> str:
     if "rally limit" in lower:
         return "Rally limit reached"
     return reason
+
+
+def _score_category(reason: str) -> str:
+    """Map a rally reason to a point-scoring category (article framework)."""
+    lower = reason.lower()
+    if "serve ace" in lower:
+        return "aces"
+    if "block read single attack lane" in lower:
+        return "block_reads"
+    if "stuffed" in lower:
+        return "block_kills"
+    if "deflection out" in lower:
+        return "deflect_outs"
+    if "tip not dug" in lower:
+        return "tips_free_balls"
+    if "roll shot" in lower or "deflect not dug" in lower or "seam shot" in lower:
+        return "tips_free_balls"
+    if "wipe" in lower or "no chase" in lower or "kill" in lower:
+        return "kills"
+    if "offensive confusion" in lower or "attacker-attacker" in lower \
+            or "front+back" in lower or "all attacks canceled" in lower:
+        return "opp_errors"
+    return "other"

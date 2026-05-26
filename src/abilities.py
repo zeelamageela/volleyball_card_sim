@@ -106,6 +106,14 @@ event (e.g. on_attack, on_block) and optionally only when a condition is met
                           ignored for this attack.  Forces quality defense.  (Phase 5)
   deck_swap_opponent  on_dig_success only.  Replace opponent's highest card
                           with the top card of their deck.  Hand disruption.  (Phase 5)
+  setter_cover        on_dig only (Libero or DS).  When a dig would otherwise
+                          be resolved by the Setter (odd-value attacks on lanes
+                          1 or 2), this player can intercept if their dig card
+                          value >= effect_value.  Success: no broken play.
+                          Failure: dig card still too low, setter had to reach
+                          — broken play fires normally.  No condition_field
+                          needed; the threshold IS effect_value.
+                          Example: effect_value=5 means a 5+ dig card covers.
 
 ── Valid condition_field values ───────────────────────────────────────────────
   attack_card_value   The raw value of the attack card (int) — on_attack
@@ -176,9 +184,11 @@ class EffectType:
     SLIDE_LANES           = "slide_lanes"          # Phase 4: Attack can shift to adjacent lane
     BACK_ROW_PIERCE       = "back_row_pierce"      # Phase 4: Back-row attacks pierce blocks
     MIN_BLOCKER_ONLY      = "min_blocker_only"     # Phase 4: Only minimum block card counts
-    WILD_BLOCK            = "wild_block"           # Phase 5: Low cards can block any lane
+    WILD_BLOCK            = "wild_block"           # Phase 5: Low cards can block any lane (legacy)
     FORCE_HIGH_BLOCK      = "force_high_block"     # Phase 5: Blocks below threshold ignored
     DECK_SWAP_OPPONENT    = "deck_swap_opponent"   # Phase 5: Replace opponent card with deck top
+    WIDE_SPREAD_BONUS     = "wide_spread_bonus"    # Phase 6: Bonus when 2 blockers differ by >= effect_value
+    SETTER_COVER         = "setter_cover"          # Libero/DS: intercept setter's dig zone if card >= threshold
 
 
 # ── Data model ─────────────────────────────────────────────────────────────────
@@ -192,6 +202,7 @@ class Ability:
     effect:          str
     effect_value:    int
     is_active:       bool = False
+    description:     str  = ""   # human-readable summary (optional)
 
     def condition_matches(self, context: Dict[str, Any]) -> bool:
         """
@@ -249,12 +260,27 @@ class AbilityEngine:
         self._pending_mb_attack_bonus:     int = 0
         self._pending_tip_threshold_delta: int = 0
         self._current_hand_size:           int = 5   # updated per attack phase
+        self._events:                      List[str] = []
+        self.verbose:                      bool = False
 
     def reset(self) -> None:
         """Reset per-game state.  Call at the start of each new game."""
         self._pending_set_delta           = 0
         self._pending_mb_attack_bonus     = 0
         self._pending_tip_threshold_delta = 0
+
+    def drain_events(self) -> List[str]:
+        """Return and clear all queued ability-trigger messages."""
+        evts = list(self._events)
+        self._events.clear()
+        return evts
+
+    def _log(self, msg: str) -> None:
+        self._events.append(msg)
+
+    def _log_fired(self, player_name: str, ability_name: str, desc: str) -> None:
+        """Log a boolean ability that just triggered."""
+        self._log(f"  * [{player_name}] {ability_name}: {desc}")
 
     # ── Phase queries ──────────────────────────────────────────────────────────
 
@@ -276,13 +302,15 @@ class AbilityEngine:
         if not card:
             return False
         ctx = {"attack_card_value": attack_card_value}
-        return any(
-            a.effect == EffectType.PIERCE_BLOCK
-            and a.trigger == Trigger.ON_ATTACK
-            and not a.is_active
-            and a.condition_matches(ctx)
-            for a in card.abilities
-        )
+        for a in card.abilities:
+            if (a.effect == EffectType.PIERCE_BLOCK
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, "pierce block (block ignored)")
+                return True
+        return False
 
     def block_value_bonus(self, role: "PlayerRole") -> int:
         """Flat bonus to add to this player's block card sum."""
@@ -375,13 +403,15 @@ class AbilityEngine:
         if not card:
             return False
         ctx = {"attack_card_value": attack_card_value}
-        return any(
-            a.effect == EffectType.SINGLE_BLOCK_ONLY
-            and a.trigger == Trigger.ON_ATTACK
-            and not a.is_active
-            and a.condition_matches(ctx)
-            for a in card.abilities
-        )
+        for a in card.abilities:
+            if (a.effect == EffectType.SINGLE_BLOCK_ONLY
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, "single block only (double block ignored)")
+                return True
+        return False
 
     def attack_dig_threshold(self, role: "PlayerRole") -> int:
         """
@@ -396,13 +426,15 @@ class AbilityEngine:
         if not card:
             return False
         ctx = {"attack_card_value": attack_card_value}
-        return any(
-            a.effect == EffectType.WIPE_BLOCK
-            and a.trigger == Trigger.ON_ATTACK
-            and not a.is_active
-            and a.condition_matches(ctx)
-            for a in card.abilities
-        )
+        for a in card.abilities:
+            if (a.effect == EffectType.WIPE_BLOCK
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, "wipe off block (instant point)")
+                return True
+        return False
 
     def no_chase(self, role: "PlayerRole", attack_card_value: int) -> bool:
         """True if a failed kill dig cannot be chased (instant attacker point)."""
@@ -410,13 +442,15 @@ class AbilityEngine:
         if not card:
             return False
         ctx = {"attack_card_value": attack_card_value}
-        return any(
-            a.effect == EffectType.NO_CHASE
-            and a.trigger == Trigger.ON_ATTACK
-            and not a.is_active
-            and a.condition_matches(ctx)
-            for a in card.abilities
-        )
+        for a in card.abilities:
+            if (a.effect == EffectType.NO_CHASE
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, "no chase (instant point on failed dig)")
+                return True
+        return False
 
     def roll_shot(self, role: "PlayerRole", attack_card_value: int) -> bool:
         """True if this attack fires as a roll shot (block ignored, no chase on fail)."""
@@ -424,13 +458,15 @@ class AbilityEngine:
         if not card:
             return False
         ctx = {"attack_card_value": attack_card_value}
-        return any(
-            a.effect == EffectType.ROLL_SHOT
-            and a.trigger == Trigger.ON_ATTACK
-            and not a.is_active
-            and a.condition_matches(ctx)
-            for a in card.abilities
-        )
+        for a in card.abilities:
+            if (a.effect == EffectType.ROLL_SHOT
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, "roll shot (block ignored, no chase)")
+                return True
+        return False
 
     def seam_shot(self, role: "PlayerRole", attack_card_value: int) -> bool:
         """True if this attack fires as a seam shot (deflect outcome = attacker wins)."""
@@ -438,13 +474,15 @@ class AbilityEngine:
         if not card:
             return False
         ctx = {"attack_card_value": attack_card_value}
-        return any(
-            a.effect == EffectType.SEAM_SHOT
-            and a.trigger == Trigger.ON_ATTACK
-            and not a.is_active
-            and a.condition_matches(ctx)
-            for a in card.abilities
-        )
+        for a in card.abilities:
+            if (a.effect == EffectType.SEAM_SHOT
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, "seam shot (deflect = instant win)")
+                return True
+        return False
 
     def slide_lanes(self, role: "PlayerRole", attack_card_value: int) -> bool:
         """True if attacker can shift to adjacent lane after blocks revealed (Phase 4)."""
@@ -452,13 +490,15 @@ class AbilityEngine:
         if not card:
             return False
         ctx = {"attack_card_value": attack_card_value}
-        return any(
-            a.effect == EffectType.SLIDE_LANES
-            and a.trigger == Trigger.ON_ATTACK
-            and not a.is_active
-            and a.condition_matches(ctx)
-            for a in card.abilities
-        )
+        for a in card.abilities:
+            if (a.effect == EffectType.SLIDE_LANES
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, "slide lanes eligible")
+                return True
+        return False
 
     def back_row_pierce(self, role: "PlayerRole", attack_card_value: int) -> bool:
         """True if back-row attacks from this player ignore blocks (Phase 4)."""
@@ -466,13 +506,15 @@ class AbilityEngine:
         if not card:
             return False
         ctx = {"attack_card_value": attack_card_value}
-        return any(
-            a.effect == EffectType.BACK_ROW_PIERCE
-            and a.trigger == Trigger.ON_ATTACK
-            and not a.is_active
-            and a.condition_matches(ctx)
-            for a in card.abilities
-        )
+        for a in card.abilities:
+            if (a.effect == EffectType.BACK_ROW_PIERCE
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, "back-row pierce (block ignored)")
+                return True
+        return False
 
     def min_blocker_only(self, role: "PlayerRole", attack_card_value: int) -> bool:
         """True if defending block is limited to minimum card (not sum) (Phase 4)."""
@@ -480,13 +522,15 @@ class AbilityEngine:
         if not card:
             return False
         ctx = {"attack_card_value": attack_card_value}
-        return any(
-            a.effect == EffectType.MIN_BLOCKER_ONLY
-            and a.trigger == Trigger.ON_ATTACK
-            and not a.is_active
-            and a.condition_matches(ctx)
-            for a in card.abilities
-        )
+        for a in card.abilities:
+            if (a.effect == EffectType.MIN_BLOCKER_ONLY
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, "min blocker only (worst block card counts)")
+                return True
+        return False
 
     def wild_block_threshold(self, role: "PlayerRole") -> int:
         """Return threshold for wild block (0 if not available). Cards <= threshold can block any lane."""
@@ -495,6 +539,18 @@ class AbilityEngine:
             return 0
         for a in card.abilities:
             if (a.effect == EffectType.WILD_BLOCK
+                    and a.trigger == Trigger.ON_BLOCK
+                    and not a.is_active):
+                return a.effect_value
+        return 0
+
+    def wide_spread_bonus(self, role: "PlayerRole") -> int:
+        """Return N when player has wide_spread_bonus N: fires when |card1-card2| >= N, adding +N to block."""
+        card = self._cards.get(role)
+        if not card:
+            return 0
+        for a in card.abilities:
+            if (a.effect == EffectType.WIDE_SPREAD_BONUS
                     and a.trigger == Trigger.ON_BLOCK
                     and not a.is_active):
                 return a.effect_value
@@ -516,17 +572,17 @@ class AbilityEngine:
 
     def deck_swap_opponent_on_dig(self, dig_type: str) -> bool:
         """True if this dig success triggers opponent hand disruption."""
-        # Check all cards for DS role (most likely to have this)
+        ctx = {"dig_type": dig_type}
         for card in self._cards.values():
-            ctx = {"dig_type": dig_type}
-            if any(
-                a.effect == EffectType.DECK_SWAP_OPPONENT
-                and a.trigger == Trigger.ON_DIG_SUCCESS
-                and not a.is_active
-                and a.condition_matches(ctx)
-                for a in card.abilities
-            ):
-                return True
+            for a in card.abilities:
+                if (a.effect == EffectType.DECK_SWAP_OPPONENT
+                        and a.trigger == Trigger.ON_DIG_SUCCESS
+                        and not a.is_active
+                        and a.condition_matches(ctx)):
+                    if self.verbose:
+                        self._log_fired(card.player_name, a.ability_name,
+                                        "deck swap (opponent discards hand)")
+                    return True
         return False
 
     def activate_tip_threshold(self, set_card_value: int) -> None:
@@ -552,6 +608,31 @@ class AbilityEngine:
         """
         return self._sum(role, Trigger.ON_DIG, EffectType.DIG_THRESHOLD, {})
 
+    def setter_cover_threshold(self) -> int:
+        """
+        Return the minimum dig card value needed for an adjacent player
+        (Libero or DS) to intercept a dig that would otherwise go to the Setter.
+        Returns 0 if no such ability is present (setter digs normally).
+        When multiple players have the ability, the easiest (lowest) threshold wins.
+        """
+        from .players import PlayerRole
+        thresholds = []
+        for role in (PlayerRole.LIBERO, PlayerRole.DS):
+            card = self._cards.get(role)
+            if not card:
+                continue
+            for a in card.abilities:
+                if (a.effect == EffectType.SETTER_COVER
+                        and a.trigger == Trigger.ON_DIG
+                        and not a.is_active):
+                    thresholds.append(a.effect_value)
+                    if self.verbose:
+                        self._log_fired(
+                            card.player_name, a.ability_name,
+                            f"setter cover active (threshold={a.effect_value})"
+                        )
+        return min(thresholds) if thresholds else 0
+
     def set_hand_size(self, n: int) -> None:
         """Update current attacker hand size for hand-exhaustion condition checks."""
         self._current_hand_size = n
@@ -572,13 +653,15 @@ class AbilityEngine:
             return False
         ctx = {"attack_card_value": attack_card_value,
                "hand_size": self._current_hand_size}
-        return any(
-            a.effect == EffectType.HOLD_CARD
-            and a.trigger == Trigger.ON_ATTACK
-            and not a.is_active
-            and a.condition_matches(ctx)
-            for a in card.abilities
-        )
+        for a in card.abilities:
+            if (a.effect == EffectType.HOLD_CARD
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, "hold card (attack card returned to hand)")
+                return True
+        return False
 
     def hand_peek_count(self) -> int:
         """Cards to peek from top of deck before committing attack cards."""
@@ -588,6 +671,22 @@ class AbilityEngine:
             total += self._sum(role, Trigger.ON_ATTACK, EffectType.HAND_PEEK,
                                {"hand_size": self._current_hand_size})
         return total
+
+    def exchange_card_eligible(self) -> bool:
+        """True if any attacking player on this team has the exchange_card ability."""
+        from .players import PlayerRole
+        for role in (PlayerRole.OH, PlayerRole.MB, PlayerRole.OPP):
+            card = self._cards.get(role)
+            if not card:
+                continue
+            if any(
+                a.effect == EffectType.EXCHANGE_CARD
+                and a.trigger == Trigger.ON_ATTACK
+                and not a.is_active
+                for a in card.abilities
+            ):
+                return True
+        return False
 
     def hand_size_modifier(self) -> int:
         """Net change to HAND_SIZE for this team (scans all on_roster abilities)."""
@@ -612,14 +711,20 @@ class AbilityEngine:
         card = self._cards.get(role)
         if not card:
             return 0
-        return sum(
-            a.effect_value
-            for a in card.abilities
+        total = 0
+        for a in card.abilities:
             if (a.trigger == trigger
-                and a.effect == effect
-                and not a.is_active
-                and a.condition_matches(context))
-        )
+                    and a.effect == effect
+                    and not a.is_active
+                    and a.condition_matches(context)):
+                total += a.effect_value
+                if self.verbose and a.effect_value != 0:
+                    sign = f"+{a.effect_value}" if a.effect_value > 0 else str(a.effect_value)
+                    self._log(
+                        f"  * [{card.player_name}] {a.ability_name}: "
+                        f"{sign} {effect.replace('_', ' ')}"
+                    )
+        return total
 
 
 # ── CSV loaders ────────────────────────────────────────────────────────────────
@@ -672,6 +777,7 @@ def load_player_cards(path: Path) -> Dict[str, PlayerCard]:
                 effect          = row["effect"].strip(),
                 effect_value    = int(row.get("effect_value", 0) or 0),
                 is_active       = row.get("is_active", "false").strip().lower() == "true",
+                description     = row.get("description", "").strip(),
             ))
     return cards
 

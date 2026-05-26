@@ -1,0 +1,92 @@
+=================================================================
+   VOLLEYBALL CARD SIM - META SNAPSHOT  (seed=2026)
+=================================================================
+
+-- 1. RALLY ENDING DISTRIBUTION  (ref vs ref, 3 000 games) --
+
+  Stuffed (block wins)                        44869  59.2%  ||||||||||||||||||||||||||||||||||||||||
+  Match deflection (atk wins)                 17609  23.2%  |||||||||||||||
+  Tip not dug (atk wins)                      12401  16.4%  |||||||||||
+  Deflect not dug (block wins)                  955   1.3%  
+
+  Total rallies : 75,834   Avg per game : 25.3
+  Avg exchanges : 1.37
+
+
+-- 2. PLAYER RANKINGS BY POSITION  (500 games each vs full ref team) --
+
+   How to read: Team A swaps ONE position with the candidate player;
+   Team B is always the full reference team.  * = the reference player.
+
+  Setter:
+     1. *Conductor        54.3%  [A]  #############
+     2.  Vex              50.3%  [A]  ############
+     3.  Hammer           50.0%  [A]  ############
+     4.  Maestro          49.3%  [B]  ############
+     5.  Echo             46.7%  [B]  ###########
+     6.  Lancer           43.3%  [C]  ##########
+
+  OPP:
+     1.  Bandit           71.0%  [S]  #################
+     2.  Breaker(OPP)     56.3%  [S]  ##############
+     3.  Phantom          54.7%  [A]  #############
+     4. *Titan            54.3%  [A]  #############
+     5.  Crusher          52.3%  [A]  #############
+     6.  Thread           51.0%  [A]  ############
+     7.  Cannon           48.7%  [B]  ############
+     8.  Clutch           48.7%  [B]  ############
+     9.  Mirage           46.7%  [B]  ###########
+    10.  Flip             39.0%  [C]  #########
+
+  MB:
+     1. *Atlas            54.3%  [A]  #############
+     2.  Shift            51.0%  [A]  ############
+     3.  Anchor           49.3%  [B]  ############
+     4.  Fortress         43.7%  [C]  ##########
+     5.  Wall             43.7%  [C]  ##########
+     6.  Prism            40.7%  [C]  ##########
+     7.  Flex             39.7%  [C]  #########
+     8.  Shield           38.7%  [C]  #########
+
+  OH:
+     1.  Spike            68.0%  [S]  #################
+     2.  Grit             68.0%  [S]  #################
+     3.  Breaker(OH)      67.3%  [S]  ################
+     4.  Roller           64.7%  [S]  ################
+     5.  Shadow           64.7%  [S]  ################
+     6.  Trickster        64.7%  [S]  ################
+     7. *Quantum          54.3%  [A]  #############
+     8.  Drift            52.3%  [A]  #############
+     9.  Edge             42.7%  [C]  ##########
+    10.  Blade            31.0%  [C]  #######
+
+  DS:
+     1.  Pierce           54.7%  [A]  #############
+     2. *Surge            54.3%  [A]  #############
+     3.  Scrap            52.7%  [A]  #############
+     4.  Laser            52.7%  [A]  #############
+     5.  Thief            51.3%  [A]  ############
+     6.  Ghost            50.0%  [A]  ############
+     7.  Rocket           49.7%  [B]  ############
+     8.  Hustle           49.0%  [B]  ############
+
+  Libero:
+     1.  Mirror           56.7%  [S]  ##############
+     2. *Vault            54.3%  [A]  #############
+     3.  Hawk             53.3%  [A]  #############
+     4.  Hope             52.0%  [A]  #############
+     5.  Spider           51.0%  [A]  ############
+
+-- 3. OPTIMAL TEAM  (greedy: best per-position pick) --
+
+  Roster:
+    Setter  : Conductor  
+    OPP     : Bandit       ← upgraded from Titan
+    MB      : Atlas      
+    OH      : Spike        ← upgraded from Quantum
+    DS      : Pierce       ← upgraded from Surge
+    Libero  : Mirror       ← upgraded from Vault
+
+  Win rate vs full reference team: 80.8%  (1 000 games)
+  Win rate in mirror match:        47.6%  (500 games, expect ~50%)
+

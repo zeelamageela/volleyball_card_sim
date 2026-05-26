@@ -1,93 +1,31 @@
-player_name,role,ability_name,trigger,condition_field,condition_value,effect,effect_value,is_active
-Hammer,Setter,Jump Serve,on_serve,,,serve_value_bonus,2,false
-Hammer,Setter,Zone Fire,on_set,set_card_value,>=5,tip_threshold_delta,1,false
-Crusher,OPP,Overpower,on_attack,attack_card_value,>=8,over_block_bonus,4,false
-Crusher,OPP,Relentless,on_attack,attack_card_value,>=7,hold_card,1,false
-Fortress,MB,Spread Block,on_block,,,adjacent_block_bonus,2,false
-Fortress,MB,Nasty Deflect,on_block_deflection,,,deflect_dig_threshold,2,false
-Breaker,OH,Solo Shot,on_attack,,,single_block_only,1,false
-Breaker,OH,Lane Split,on_attack,attack_card_value,>=6,over_block_bonus,2,false
-Hawk,Libero,Eagle Eye,on_dig,,,dig_threshold,2,false
-Hawk,Libero,Clean Pass,on_dig_success,dig_type,normal,set_value_delta,2,false
-Hustle,DS,Dive and Roll,on_chase,,,chase_card_bonus,3,false
-Hustle,DS,Second Wind,on_dig_failure,,,chase_card_bonus,1,false
-Maestro,Setter,Maestro Touch,on_set,set_card_value,>=7,set_value_delta,2,false
-Maestro,Setter,Floater,on_serve,,,serve_value_bonus,1,false
-Phantom,OPP,Laser Shot,on_attack,attack_card_value,>=7,pierce_block,1,false
-Phantom,OPP,Ghost Tip,on_tip,,,tip_value_bonus,2,false
-Wall,MB,Net Presence,on_block,,,adjacent_block_bonus,2,false
-Wall,MB,Hard Redirect,on_block_deflection,,,deflect_dig_threshold,2,false
-Blade,OH,Kill Shot,on_attack,attack_card_value,>=8,pierce_block,1,false
-Blade,OH,Blade Edge,on_attack,hand_size,<=2,attack_value_bonus,3,false
-Spider,Libero,Safe Hands,on_dig,,,dig_threshold,1,false
-Spider,Libero,Quick Transition,on_dig_success,dig_type,normal,set_value_delta,2,false
-Ghost,DS,Slide,on_chase,,,chase_card_bonus,2,false
-Ghost,DS,Rising,on_dig_failure,,,chase_card_bonus,3,false
-Lancer,Setter,Quick Arc,on_set,set_card_value,>=8,tip_threshold_delta,2,false
-Lancer,Setter,Precision Serve,on_serve,,,serve_value_bonus,1,false
-Cannon,OPP,Read the Block,on_attack,,,over_block_bonus,3,false
-Cannon,OPP,Unstoppable,on_attack,attack_card_value,>=8,no_chase,1,false
-Spike,OH,Glass Jaw,on_attack,attack_card_value,1,wipe_block,1,false
-Spike,OH,Power Roll,on_attack,attack_card_value,>=7,roll_shot,1,false
-Thread,OPP,Seam Finder,on_attack,attack_card_value,>=8,seam_shot,1,false
-Thread,OPP,Precision,on_attack,attack_card_value,>=8,pierce_block,1,false
-Roller,OH,Roll Shot,on_attack,attack_card_value,>=6,roll_shot,1,false
-Roller,OH,Topspin Ace,on_attack,attack_card_value,10,seam_shot,1,false
-Echo,Setter,Comeback Touch,on_set,set_card_value,>=4,set_value_delta,3,false
-Echo,Setter,Rally Cry,on_serve,,,serve_value_bonus,2,false
-Clutch,OPP,Underdog Power,on_attack,attack_card_value,<=5,attack_value_bonus,5,false
-Clutch,OPP,Relentless,on_attack,attack_card_value,>=7,over_block_bonus,4,false
-Anchor,MB,Wall Up,on_block,,,block_value_bonus,3,false
-Anchor,MB,Rebound,on_block_deflection,,,deflect_dig_threshold,2,false
-Grit,OH,Make it Work,on_attack,attack_card_value,>=7,roll_shot,1,false
-Grit,OH,Desperation,on_attack,attack_card_value,1,wipe_block,1,false
-Scrap,DS,Hustle Play,on_chase,,,chase_card_bonus,4,false
-Scrap,DS,Never Down,on_dig_failure,,,chase_card_bonus,3,false
-Hope,Libero,Second Life,on_dig,dig_type,tip,dig_threshold,3,false
-Hope,Libero,Believe,on_dig_success,dig_type,normal,set_value_delta,3,false
-Vex,Setter,Mind Break,on_set,set_card_value,>=5,set_value_delta,4,false
-Vex,Setter,Disruption,on_serve,,,serve_value_bonus,2,false
-Flip,OPP,Reverse Psychology,on_attack,attack_card_value,<=5,attack_value_bonus,6,false
-Flip,OPP,Unexpected,on_attack,attack_card_value,>=8,seam_shot,1,false
-Shift,MB,Read and Adjust,on_block,,,block_value_bonus,4,false
-Shift,MB,Coverage,on_block_deflection,,,deflect_dig_threshold,2,false
-Trickster,OH,Misdirection,on_attack,attack_card_value,>=6,roll_shot,1,false
-Trickster,OH,Chaos,on_attack,attack_card_value,1,wipe_block,1,false
-Snatch,DS,Pickpocket,on_chase,,,chase_card_bonus,4,false
-Snatch,DS,Opportunist,on_dig_failure,,,chase_card_bonus,3,false
-Mirror,Libero,Reflect,on_dig_success,dig_type,normal,set_value_delta,3,false
-Mirror,Libero,Safe Hands,on_dig,,,dig_threshold,3,false
-Conductor,Setter,Grand Orchestration,on_set,set_card_value,>=6,set_value_delta,5,false
-Conductor,Setter,Tempo Control,on_serve,,,serve_value_bonus,3,false
-Bandit,OPP,Highway Robbery,on_attack,attack_card_value,>=7,over_block_bonus,6,false
-Bandit,OPP,Quick Hands,on_attack,attack_card_value,>=5,pierce_block,1,false
-Atlas,MB,Fortress Wall,on_block,,,block_value_bonus,6,false
-Atlas,MB,Immovable,on_block,,,adjacent_block_bonus,5,false
-Shadow,OH,Phase Shift,on_attack,attack_card_value,>=6,roll_shot,1,false
-Shadow,OH,Vanish,on_attack,attack_card_value,1,wipe_block,1,false
-Surge,DS,Momentum Wave,on_chase,,,chase_card_bonus,6,false
-Surge,DS,Explosive,on_dig_failure,,,chase_card_bonus,5,false
-Vault,Libero,Trade Secret,on_dig_success,dig_type,normal,set_value_delta,5,false
-Vault,Libero,Lockdown,on_dig,,,dig_threshold,4,false
-Drift,OH,Phase Shift,on_attack,attack_card_value,>=5,slide_lanes,1,false
-Drift,OH,Flow State,on_attack,attack_card_value,>=7,attack_value_bonus,3,false
-Pierce,DS,Backline Power,on_attack,attack_card_value,>=6,back_row_pierce,1,false
-Pierce,DS,Recovery,on_chase,,,chase_card_bonus,3,false
-Mirage,OPP,Illusionist,on_attack,attack_card_value,>=6,slide_lanes,1,false
-Mirage,OPP,Deception,on_attack,attack_card_value,>=8,seam_shot,1,false
-Rocket,DS,Explosive Launch,on_attack,attack_card_value,>=7,back_row_pierce,1,false
-Rocket,DS,Boost,on_chase,,,chase_card_bonus,4,false
-Quantum,OH,Superposition,on_attack,attack_card_value,>=7,slide_lanes,1,false
-Quantum,OH,Collapse,on_attack,attack_card_value,>=8,min_blocker_only,1,false
-Laser,DS,Precision Strike,on_attack,attack_card_value,>=8,back_row_pierce,1,false
-Laser,DS,Momentum,on_chase,,,chase_card_bonus,5,false
-Flex,MB,Flexible Defense,on_block,,,wild_block,4,false
-Flex,MB,Wall Up,on_block,,,block_value_bonus,2,false
-Titan,OPP,Overwhelming Force,on_attack,attack_card_value,>=8,force_high_block,5,false
-Titan,OPP,Powerhouse,on_attack,attack_card_value,>=7,attack_value_bonus,3,false
-Thief,DS,Card Steal,on_dig_success,dig_type,normal,deck_swap_opponent,1,false
-Thief,DS,Recovery,on_chase,,,chase_card_bonus,4,false
-Shield,MB,Universal Block,on_block,,,wild_block,5,false
-Shield,MB,Spread,on_block,,,adjacent_block_bonus,3,false
-Breaker,OPP,High Standard,on_attack,attack_card_value,>=9,force_high_block,6,false
-Breaker,OPP,Smash,on_attack,attack_card_value,>=8,over_block_bonus,5,false
+player_name,role,ability_name,trigger,condition_field,condition_value,effect,effect_value,is_active,description
+Sarge,Setter,Command Set,on_set,set_card_value,>=6,set_value_delta,2,false,Set >=6: set value +2
+Strike,OPP,Power Arm,on_attack,attack_card_value,>=7,over_block_bonus,3,false,Attack >=7: effective attack +3 over block
+Ram,MB,Front Wall,on_block,,,block_value_bonus,2,false,Block: value +2
+Blaze,OH,Drive Shot,on_attack,attack_card_value,>=8,roll_shot,1,false,Attack >=8: roll shot (bypasses normal dig)
+Dash,DS,Hot Pursuit,on_dig_failure,,,chase_card_bonus,3,false,After failed dig: chase card +3
+Reed,Libero,Sure Hands,on_dig,,,dig_threshold,1,false,Dig threshold +1
+Echo,Setter,Float Serve,on_serve,,,serve_value_bonus,2,false,Serve: card value +2
+Lance,OPP,Needle,on_attack,attack_card_value,>=8,pierce_block,1,false,Attack >=8: ignore 1 blocker's card
+Shield,MB,Wide Net,on_block,,,adjacent_block_bonus,2,false,Block: adjacent lanes +2
+Drift,OH,Heavy Topspin,on_attack,attack_card_value,>=7,attack_value_bonus,2,false,Attack >=7: attack value +2
+Scoop,DS,Safety Net,on_dig_failure,,,chase_card_bonus,2,false,After failed dig: chase card +2
+River,Libero,Clean Pass,on_dig_success,dig_type,normal,set_value_delta,2,false,After successful normal dig: set value +2
+Breeze,Setter,Soft Set,on_set,set_card_value,>=5,set_value_delta,2,false,Set >=5: set value +2
+Clutch,OPP,Lucky Swing,on_attack,attack_card_value,>=7,over_block_bonus,5,false,Attack >=7: effective attack +5 over block
+Anchor,MB,Steady Block,on_block,,,adjacent_block_bonus,2,false,Block: adjacent lanes +2
+Grit,OH,Hustle,on_attack,attack_card_value,>=7,roll_shot,1,false,Attack >=7: roll shot (bypasses normal dig)
+Scrap,DS,Scramble,on_dig_failure,,,chase_card_bonus,3,false,After failed dig: chase card +3
+Hope,Libero,Safe Hands,on_dig,,,dig_threshold,1,false,Dig threshold +1
+Vex,Setter,Precision Set,on_set,set_card_value,>=5,set_value_delta,3,false,Set >=5: set value +3
+Flip,OPP,Power Cut,on_attack,attack_card_value,>=7,over_block_bonus,5,false,Attack >=7: effective attack +5 over block
+Shift,MB,Block Shift,on_block,,,adjacent_block_bonus,4,false,Block: adjacent lanes +4
+Trickster,OH,Snap Shot,on_attack,attack_card_value,>=7,roll_shot,1,false,Attack >=7: roll shot (bypasses normal dig)
+Snatch,DS,Quick Save,on_dig_failure,,,chase_card_bonus,4,false,After failed dig: chase card +4
+Mirror,Libero,Reflect Pass,on_dig,,,dig_threshold,2,false,Dig threshold +2
+Conductor,Setter,Command Rally,on_set,,,set_value_delta,4,false,Set: value +4
+Bandit,OPP,Overpower,on_attack,attack_card_value,>=6,over_block_bonus,6,false,Attack >=6: effective attack +6 over block
+Atlas,MB,Iron Wall,on_block,,,adjacent_block_bonus,5,false,Block: adjacent lanes +5
+Shadow,OH,Phantom Shot,on_attack,attack_card_value,>=6,roll_shot,1,false,Attack >=6: roll shot (bypasses normal dig)
+Surge,DS,Wave Break,on_dig_failure,,,chase_card_bonus,6,false,After failed dig: chase card +6
+Vault,Libero,Iron Hands,on_dig,,,dig_threshold,2,false,Dig threshold +2

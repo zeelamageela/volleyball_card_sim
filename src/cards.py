@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 HAND_SIZE = 5
 
@@ -61,6 +61,14 @@ class Deck:
         self._draw_pile = self._discard_pile[:]
         self._discard_pile = []
         self._rng.shuffle(self._draw_pile)
+
+    def peek(self) -> Optional[Card]:
+        """Return the top card without drawing it. Returns None if deck is empty."""
+        if not self._draw_pile:
+            if not self._discard_pile:
+                return None
+            self._reshuffle_discard()
+        return self._draw_pile[-1]
 
     @property
     def draw_pile_size(self) -> int:

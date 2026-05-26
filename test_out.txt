@@ -1,0 +1,4 @@
+Step 1: imports done
+Step 2: cards loaded
+Step 3: engine made
+Step 4: sim done wins= {'A': 2, 'B': 8}

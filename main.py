@@ -133,6 +133,7 @@ def main(argv: list[str] | None = None) -> None:
         engine_b=engine_b,
         name_a="Team A",
         name_b=name_b,
+        use_hand_b=not is_pvd,
     )
 
     mode_label = f"{args.strategy_a} vs dummy" if is_pvd else f"{args.strategy_a} vs {args.strategy_b}"
