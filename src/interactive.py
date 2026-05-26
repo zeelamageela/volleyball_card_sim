@@ -380,3 +380,20 @@ class InteractiveStrategy(BaseStrategy):
             except (ValueError, EOFError):
                 pass
             print(f"  ! Enter 0 to decline or 1-{len(hand)}")
+
+    def choose_cover_attempt(self, hand: List[Card], threshold: int) -> Optional[Card]:
+        self._drain()
+        self._hdr(f"COVER ATTEMPT  |  threshold: {threshold}")
+        print("  Ball landed in setter zone — Libero/DS can attempt cover")
+        self._show_hand(hand)
+        print("  [0] Skip cover (setter digs, broken play)")
+        while True:
+            try:
+                idx = int(input(f"  Choice [0-{len(hand)}]: ").strip())
+                if idx == 0:
+                    return None
+                if 1 <= idx <= len(hand):
+                    return hand[idx - 1]
+            except (ValueError, EOFError):
+                pass
+            print(f"  ! Enter 0 to skip or 1-{len(hand)}")

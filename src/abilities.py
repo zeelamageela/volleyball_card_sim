@@ -62,7 +62,10 @@ event (e.g. on_attack, on_block) and optionally only when a condition is met
                           Typical condition: attack_card_value == 1.
   no_chase                on_attack only.  When a kill dig fails, skip the
                           chase entirely — instant attacker point.
-  roll_shot               on_attack only.  Block is ignored for this attack AND
+  roll_shot               on_attack only.  Attack goes over the block (block ignored)
+                          and is dug like a tip (defender gets tip_dig bonus).
+                          Activates when attack_card_value matches the condition.
+  heavy_spin              on_attack only.  Block is ignored for this attack AND
                           a failed dig cannot be chased (instant point).
                           Activates when attack_card_value matches the condition.
   seam_shot               on_attack only.  If the attack produces a DEFLECT
@@ -106,6 +109,11 @@ event (e.g. on_attack, on_block) and optionally only when a condition is met
                           ignored for this attack.  Forces quality defense.  (Phase 5)
   deck_swap_opponent  on_dig_success only.  Replace opponent's highest card
                           with the top card of their deck.  Hand disruption.  (Phase 5)
+  draw_and_add_block  on_block only.  Draw effect_value cards from deck and add
+                          their total value to this player's block contribution.
+                          Cards are immediately discarded.  Creates variance in
+                          blocking (avg +5.5 per card drawn from standard deck).
+                          Example: effect_value=1 draws 1 card, adds its value.
   setter_cover        on_dig only (Libero or DS).  When a dig would otherwise
                           be resolved by the Setter (odd-value attacks on lanes
                           1 or 2), this player can intercept if their dig card
@@ -174,6 +182,7 @@ class EffectType:
     WIPE_BLOCK            = "wipe_block"
     NO_CHASE              = "no_chase"
     ROLL_SHOT             = "roll_shot"
+    HEAVY_SPIN            = "heavy_spin"
     SEAM_SHOT             = "seam_shot"
     TIP_THRESHOLD_DELTA   = "tip_threshold_delta"
     OVER_BLOCK_BONUS      = "over_block_bonus"
@@ -188,6 +197,7 @@ class EffectType:
     FORCE_HIGH_BLOCK      = "force_high_block"     # Phase 5: Blocks below threshold ignored
     DECK_SWAP_OPPONENT    = "deck_swap_opponent"   # Phase 5: Replace opponent card with deck top
     WIDE_SPREAD_BONUS     = "wide_spread_bonus"    # Phase 6: Bonus when 2 blockers differ by >= effect_value
+    DRAW_AND_ADD_BLOCK    = "draw_and_add_block"   # Draw N cards from deck, add to block, discard
     SETTER_COVER         = "setter_cover"          # Libero/DS: intercept setter's dig zone if card >= threshold
 
 
@@ -453,7 +463,7 @@ class AbilityEngine:
         return False
 
     def roll_shot(self, role: "PlayerRole", attack_card_value: int) -> bool:
-        """True if this attack fires as a roll shot (block ignored, no chase on fail)."""
+        """True if this attack fires as a roll shot (goes over block, dug like tip)."""
         card = self._cards.get(role)
         if not card:
             return False
@@ -464,7 +474,23 @@ class AbilityEngine:
                     and not a.is_active
                     and a.condition_matches(ctx)):
                 if self.verbose:
-                    self._log_fired(card.player_name, a.ability_name, "roll shot (block ignored, no chase)")
+                    self._log_fired(card.player_name, a.ability_name, "roll shot (goes over block, dug like tip)")
+                return True
+        return False
+
+    def heavy_spin(self, role: "PlayerRole", attack_card_value: int) -> bool:
+        """True if this attack fires as heavy spin (block ignored, no chase on fail)."""
+        card = self._cards.get(role)
+        if not card:
+            return False
+        ctx = {"attack_card_value": attack_card_value}
+        for a in card.abilities:
+            if (a.effect == EffectType.HEAVY_SPIN
+                    and a.trigger == Trigger.ON_ATTACK
+                    and not a.is_active
+                    and a.condition_matches(ctx)):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, "heavy spin (block ignored, no chase)")
                 return True
         return False
 
@@ -632,6 +658,21 @@ class AbilityEngine:
                             f"setter cover active (threshold={a.effect_value})"
                         )
         return min(thresholds) if thresholds else 0
+
+    def draw_and_add_block(self, role: "PlayerRole") -> int:
+        """Return number of cards to draw from deck and add to block (0 if none)."""
+        card = self._cards.get(role)
+        if not card:
+            return 0
+        for a in card.abilities:
+            if (a.effect == EffectType.DRAW_AND_ADD_BLOCK
+                    and a.trigger == Trigger.ON_BLOCK
+                    and not a.is_active):
+                if self.verbose:
+                    self._log_fired(card.player_name, a.ability_name, 
+                                    f"draw {a.effect_value} card(s) and add to block")
+                return a.effect_value
+        return 0
 
     def set_hand_size(self, n: int) -> None:
         """Update current attacker hand size for hand-exhaustion condition checks."""

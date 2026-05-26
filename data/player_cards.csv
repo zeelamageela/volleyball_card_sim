@@ -1,31 +1,32 @@
 player_name,role,ability_name,trigger,condition_field,condition_value,effect,effect_value,is_active,description
-Sarge,Setter,Command Set,on_set,set_card_value,>=6,set_value_delta,2,false,Set >=6: set value +2
-Strike,OPP,Power Arm,on_attack,attack_card_value,>=7,over_block_bonus,3,false,Attack >=7: effective attack +3 over block
-Ram,MB,Front Wall,on_block,,,block_value_bonus,2,false,Block: value +2
-Blaze,OH,Drive Shot,on_attack,attack_card_value,>=8,roll_shot,1,false,Attack >=8: roll shot (bypasses normal dig)
-Dash,DS,Hot Pursuit,on_dig_failure,,,chase_card_bonus,3,false,After failed dig: chase card +3
-Reed,Libero,Sure Hands,on_dig,,,dig_threshold,1,false,Dig threshold +1
-Echo,Setter,Float Serve,on_serve,,,serve_value_bonus,2,false,Serve: card value +2
+Blaze,OH,Drive Shot,on_attack,attack_card_value,>=8,heavy_spin,1,false,Attack >=8: heavy spin (bypasses block & chase)
+Strike,OPP,Precision Pierce,on_attack,attack_card_value,>=8,pierce_block,1,false,Attack >=8: ignore 1 blocker's card
+Ram,MB,Slide Block,on_attack,attack_card_value,>=5,slide_lanes,1,false,Attack ≥5: can slide to adjacent lane after block reveal
 Lance,OPP,Needle,on_attack,attack_card_value,>=8,pierce_block,1,false,Attack >=8: ignore 1 blocker's card
-Shield,MB,Wide Net,on_block,,,adjacent_block_bonus,2,false,Block: adjacent lanes +2
-Drift,OH,Heavy Topspin,on_attack,attack_card_value,>=7,attack_value_bonus,2,false,Attack >=7: attack value +2
-Scoop,DS,Safety Net,on_dig_failure,,,chase_card_bonus,2,false,After failed dig: chase card +2
-River,Libero,Clean Pass,on_dig_success,dig_type,normal,set_value_delta,2,false,After successful normal dig: set value +2
-Breeze,Setter,Soft Set,on_set,set_card_value,>=5,set_value_delta,2,false,Set >=5: set value +2
-Clutch,OPP,Lucky Swing,on_attack,attack_card_value,>=7,over_block_bonus,5,false,Attack >=7: effective attack +5 over block
-Anchor,MB,Steady Block,on_block,,,adjacent_block_bonus,2,false,Block: adjacent lanes +2
-Grit,OH,Hustle,on_attack,attack_card_value,>=7,roll_shot,1,false,Attack >=7: roll shot (bypasses normal dig)
-Scrap,DS,Scramble,on_dig_failure,,,chase_card_bonus,3,false,After failed dig: chase card +3
-Hope,Libero,Safe Hands,on_dig,,,dig_threshold,1,false,Dig threshold +1
-Vex,Setter,Precision Set,on_set,set_card_value,>=5,set_value_delta,3,false,Set >=5: set value +3
-Flip,OPP,Power Cut,on_attack,attack_card_value,>=7,over_block_bonus,5,false,Attack >=7: effective attack +5 over block
-Shift,MB,Block Shift,on_block,,,adjacent_block_bonus,4,false,Block: adjacent lanes +4
-Trickster,OH,Snap Shot,on_attack,attack_card_value,>=7,roll_shot,1,false,Attack >=7: roll shot (bypasses normal dig)
-Snatch,DS,Quick Save,on_dig_failure,,,chase_card_bonus,4,false,After failed dig: chase card +4
-Mirror,Libero,Reflect Pass,on_dig,,,dig_threshold,2,false,Dig threshold +2
-Conductor,Setter,Command Rally,on_set,,,set_value_delta,4,false,Set: value +4
-Bandit,OPP,Overpower,on_attack,attack_card_value,>=6,over_block_bonus,6,false,Attack >=6: effective attack +6 over block
-Atlas,MB,Iron Wall,on_block,,,adjacent_block_bonus,5,false,Block: adjacent lanes +5
-Shadow,OH,Phantom Shot,on_attack,attack_card_value,>=6,roll_shot,1,false,Attack >=6: roll shot (bypasses normal dig)
-Surge,DS,Wave Break,on_dig_failure,,,chase_card_bonus,6,false,After failed dig: chase card +6
-Vault,Libero,Iron Hands,on_dig,,,dig_threshold,2,false,Dig threshold +2
+Drift,OH,Roll Shot,on_attack,attack_card_value,>=6,roll_shot,1,false,Attack ≥6: roll shot (over block, dug like tip)
+Shield,MB,Seam Finder,on_attack,attack_card_value,>=8,seam_shot,1,false,Attack >=8: deflection = instant win
+Atlas,MB,Lucky Draw,on_block,,,draw_and_add_block,2,false,Block: draw 2 cards - keep highest or both if either ≤5
+Trigger,Setter,Quick Tempo,on_quick_set,,,attack_value_bonus,4,false,Quick set: MB attack value +4
+Trigger,Setter,Lucky Draw,on_block,,,draw_and_add_block,2,false,Block: draw 2 cards - keep highest or both if either ≤5
+Trigger,Setter,Block Assist,on_block,,,adjacent_block_bonus,2,false,Block: adjacent lanes +2
+Ricochet,MB,Lucky Draw,on_block,,,draw_and_add_block,2,false,Block: draw 2 cards - keep highest or both if either ≤5
+Ricochet,MB,Seam Finder,on_attack,attack_card_value,>=8,seam_shot,1,false,Attack >=8: deflection = instant win
+Ricochet,MB,Slide Attack,on_attack,attack_card_value,>=5,slide_lanes,1,false,Attack ≥5: can slide to adjacent lane after block reveal
+Ricochet,MB,Power Attack,on_attack,attack_card_value,>=6,attack_value_bonus,5,false,Attack ≥6: attack value +5
+Havoc,OH,Roll Shot,on_attack,attack_card_value,>=6,roll_shot,1,false,Attack ≥6: roll shot (over block, dug like tip)
+Havoc,OH,Heavy Spin,on_attack,attack_card_value,>=8,heavy_spin,1,false,Attack ≥8: heavy spin (bypasses block & chase)
+Havoc,OH,Power Attack,on_attack,attack_card_value,>=5,attack_value_bonus,5,false,Attack ≥5: attack value +5
+Razor,OPP,Pierce Block,on_attack,attack_card_value,>=7,pierce_block,1,false,Attack ≥7: ignore 1 blocker's card
+Razor,OPP,Seam Finder,on_attack,attack_card_value,>=9,seam_shot,1,false,Attack ≥9: deflection = instant win
+Razor,OPP,Power Attack,on_attack,attack_card_value,>=5,attack_value_bonus,6,false,Attack ≥5: attack value +6
+Phantom,DS,Back Row Pierce,on_attack,attack_card_value,>=5,back_row_pierce,1,false,Attack ≥5: back-row ignores blocks
+Phantom,DS,Power Attack,on_attack,attack_card_value,>=4,attack_value_bonus,5,false,Attack ≥4: attack value +5
+Phantom,DS,Defensive Read,on_dig,,,dig_threshold,3,false,Dig threshold +3
+Lucky,Libero,Lucky Draw,on_block,,,draw_and_add_block,2,false,Block: draw 2 cards - keep highest or both if either ≤5
+Lucky,Libero,Fortune Favors,on_dig,,,dig_threshold,3,false,Dig threshold +3
+Flex,Setter,Tempo Assist,on_quick_set,,,attack_value_bonus,4,false,Quick set: MB attack value +4
+Glide,OH,Slide Attack,on_attack,attack_card_value,>=5,slide_lanes,1,false,Attack ≥5: can slide to adjacent lane after block reveal
+Glide,OH,Elite Roll,on_attack,attack_card_value,>=7,heavy_spin,1,false,Attack ≥7: heavy spin (bypasses block & chase)
+Swift,MB,Quick Slide,on_attack,attack_card_value,>=4,slide_lanes,1,false,Attack ≥4: can slide to adjacent lane after block reveal
+Swift,MB,Lucky Block,on_block,,,draw_and_add_block,2,false,Block: draw 2 cards - keep highest or both if either ≤5
+Tempo,OPP,Back Row Power,on_attack,attack_card_value,>=5,back_row_pierce,1,false,Attack ≥5: back-row ignores blocks

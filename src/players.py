@@ -158,9 +158,9 @@ class GridPlayer:
 
 
 class Team:
-    def __init__(self, name: str, rng: random.Random, use_hand: bool = True) -> None:
+    def __init__(self, name: str, rng: random.Random, use_hand: bool = True, deck_type: str = "standard") -> None:
         self.name = name
-        self.deck = Deck(rng)
+        self.deck = Deck(rng, deck_type=deck_type)
         self.hand: List[Card] = []
         self.held_card: Optional[Card] = None
         self.use_hand = use_hand

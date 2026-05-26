@@ -187,3 +187,91 @@ Lane key: Lane 1 = OH · Lane 2 = MB · Lane 3 = OPP
 3. **Dummy teams intentionally overpowered** — DummyStrategy plays blind; abilities compensate for ~40pp strategy gap
 4. **adjacent_block_bonus is the blind dummy's best tool** — covers lanes Smart players route to
 5. **Set templates are universal** — same rules for all teams; differentiation comes from ability cards only
+
+---
+
+## Post-Phase 6 Rule Change: Matching System Revision
+
+**Date:** May 25, 2026  
+**Issue:** Discovered during physical playtest that attacker-blocker matching rules were completely wrong in code
+
+### Old Rule (incorrect):
+- Attacker matches blocker → **Immediate winner determined**
+  - Multiple lanes armed → Attacker wins (deflection out)
+  - Single lane armed → Defender wins (stuffed)
+
+### New Rule (correct for physical play):
+- Attacker matches blocker → **Lane is ELIMINATED (cannot be chosen)**
+  - Attacker must choose from remaining non-matched lanes
+  - If ALL lanes matched → Defender wins automatically
+
+### Example from Physical Playtest:
+**Setup:** Blitz arms lanes 1,2,3 with cards 7,4,3. Easy Dummy blocks 7,7,2.
+- Lane 1: 7 vs 7 → **MATCH → Eliminated**
+- Lane 2: 4 vs 7 → Would be stuffed (available)  
+- Lane 3: 3 vs (2+2 adjacent) = 4 → Would be stuffed (available)
+- **Result:** Player chooses Lane 3, gets stuffed
+
+### Code Changes:
+- Modified [src/game.py](src/game.py) lines 318-335: Attacker-blocker match removes lane from attack_cards
+- Removed deflection-dig mechanic that was incorrectly applied to matches
+- Added proper tracking via last_match_result for "all lanes eliminated" outcome
+- Updated [QUICK_REFERENCE.md](QUICK_REFERENCE.md): Matching system rules section rewritten
+
+### Balance Impact:
+- Win rates stable (Blitz still ~76% vs Easy Dummy)
+- ~12% of rallies end with "All lanes eliminated" (all matches)
+- Matches now create **tactical lane elimination** rather than deflections or instant points
+- Attackers must plan for reduced lane availability
+- Smart blocking can force bad lane choices by matching preferred lanes
+
+### Design Rationale:
+Matching as elimination creates cleaner physical gameplay:
+1. No complex dig resolution needed for matches — cards simply removed
+2. Forces attackers to consider multiple viable lanes when arming
+3. Rewards blockers for reading correctly without instant scoring
+4. Creates tactical risk/reward: match your best lane = must attack weaker lane
+5. Intuitive for physical card play: matched cards physically set aside, can't be used
+
+---
+
+## Post-Phase 6 Rule Addition: Dummy Double-Block Rule
+
+**Date:** May 25, 2026  
+**Issue:** Dummy blocking logic for physical play was not implemented in code
+
+### Physical Play Rule for Dummy Blocking:
+
+When the dummy team blocks **2 attacked lanes** with **3 total blockers**:
+
+1. **Count the parity** of the dummy's hand cards (odd vs even)
+2. **Majority EVEN** → Double block the **rightmost** (higher lane number), single block leftmost
+3. **Majority ODD or tie** → Double block the **leftmost** (lower lane number), single block rightmost
+
+### Example:
+**Attacker arms:** Lane 1 (OH) and Lane 2 (MB)  
+**Dummy hand:** [2, 4, 6, 8, 9] → 4 even, 1 odd → **EVEN majority**
+
+**Result:**
+- Lane 2 (rightmost): Double block [2, 4]
+- Lane 1 (leftmost): Single block [6]
+
+**If hand was [3, 5, 7, 8, 9]** → 3 odd, 2 even → **ODD majority**
+
+**Result:**
+- Lane 1 (leftmost): Double block [3, 5]
+- Lane 2 (rightmost): Single block [7]
+
+### Code Changes:
+- Modified [src/strategies.py](src/strategies.py) lines 288-330: `DummyStrategy.choose_block_cards()`
+- Now implements full parity-based blocking logic
+- Handles 1, 2, or 3 attacked lanes appropriately
+- 2 lanes → 3 blockers (double + single)
+- 3 lanes → 3 blockers (one per lane)
+
+### Balance Impact:
+- Dummy now presents more varied blocking patterns
+- Smart strategy can still exploit by tracking hand parity
+- Creates realistic physical play experience where dummy doesn't just stack one lane
+- Win rates remain stable: Blitz 76.6% vs Easy (1000 games, seed 42) — essentially unchanged
+- Matching frequency slightly increased due to more distributed blocking

@@ -21,28 +21,34 @@ class Card:
 
 class Deck:
     """
-    28-card buffed deck.
+    Standard 28-card deck or modified "dummy" 28-card deck.
 
-    Counts per value:
+    Standard counts (28 cards):
       1×1  2×2  3×3  4×4  4×5  4×6  4×7  3×8  2×9  1×10
+      Distribution: 46% low (1-4), 29% mid (5-6), 36% high (7-10)
 
-    Rationale: extra mid-range cards (4–7) reduce tippable low cards; rare aces
-    and a single 10 keep extreme values meaningful without dominating.
+    Dummy counts (28 cards) - Gradual shift to extremes:
+      1×2  2×2  3×3  4×4  5×3  6×3  7×4  8×3  9×3  10×2
+      Distribution: 39% low (1-4), 21% mid (5-6), 39% high (7-10)
+      (Reduces mediocre middle, adds finesse at bottom and power at top)
     """
 
-    _COUNTS: dict = {1: 1, 2: 2, 3: 3, 4: 4, 5: 4, 6: 4, 7: 4, 8: 3, 9: 2, 10: 1}
+    _STANDARD_COUNTS: dict = {1: 1, 2: 2, 3: 3, 4: 4, 5: 4, 6: 4, 7: 4, 8: 3, 9: 2, 10: 1}
+    _DUMMY_COUNTS: dict = {1: 2, 2: 2, 3: 2, 4: 3, 5: 2, 6: 2, 7: 4, 8: 5, 9: 4, 10: 2}
     _COLORS = ("red", "black")
 
-    def __init__(self, rng: random.Random) -> None:
+    def __init__(self, rng: random.Random, deck_type: str = "standard") -> None:
         self._rng = rng
         self._draw_pile: List[Card] = []
         self._discard_pile: List[Card] = []
+        self._deck_type = deck_type
         self._build_and_shuffle()
 
     def _build_and_shuffle(self) -> None:
+        counts = self._DUMMY_COUNTS if self._deck_type == "dummy" else self._STANDARD_COUNTS
         self._draw_pile = [
             Card(v, self._COLORS[i % 2])
-            for v, count in self._COUNTS.items()
+            for v, count in counts.items()
             for i in range(count)
         ]
         self._rng.shuffle(self._draw_pile)

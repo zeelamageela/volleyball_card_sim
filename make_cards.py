@@ -10,6 +10,7 @@ Usage:
 import csv
 import os
 import argparse
+from typing import Optional, List
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -49,9 +50,9 @@ ROLE_LABEL = {
 }
 
 
-def load_team_assignments(data_dir: str) -> dict[str, str]:
+def load_team_assignments(data_dir: str):
     """Return {player_name: team_display_name} by reading all known roster CSVs."""
-    assignments: dict[str, str] = {}
+    assignments = {}
     for stem, display in ROSTER_MAP.items():
         path = os.path.join(data_dir, f"{stem}.csv")
         if os.path.exists(path):
@@ -218,10 +219,279 @@ def draw_set_template_card(
     c.drawCentredString(x + w / 2, cur_y, "Broken play: setter dug ball this rally")
 
 
+def draw_quick_set_reference(
+    c: canvas.Canvas,
+    x: float, y: float, w: float, h: float,
+) -> None:
+    """Draw quick set mechanics reference card."""
+    c.setLineWidth(1.8)
+    c.setStrokeColor(colors.black)
+    c.roundRect(x, y, w, h, radius=8, stroke=1, fill=0)
+
+    cur_y = y + h - 10
+
+    # Title
+    c.setFont("Helvetica-Bold", 13)
+    c.setFillColor(colors.black)
+    c.drawCentredString(x + w / 2, cur_y, "QUICK SET RULES")
+    cur_y -= 10
+
+    c.setFont("Helvetica", 7)
+    c.drawCentredString(x + w / 2, cur_y, "Set card 1-3 only")
+    cur_y -= 10
+
+    c.setLineWidth(0.8)
+    c.line(x + 8, cur_y, x + w - 8, cur_y)
+    cur_y -= 13
+
+    # Quick lanes
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "Quick Lanes:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• Lane 1 (OH)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Lane 2 (MB)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Lane 3 (OPP)")
+    cur_y -= 14
+
+    # Single blocker rule
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "Single Blocker Rule:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• Only 1 blocker per quick lane")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Must blind draw from deck")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Cannot choose from hand")
+    cur_y -= 14
+
+    # No chase rule
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "No Chase Rule:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• Failed quick set dig = point")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• No chase attempt allowed")
+    cur_y -= 14
+
+    # Advantage
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "Tactical Advantage:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "Efficient, high-pressure option")
+
+
+def draw_attack_types_reference(
+    c: canvas.Canvas,
+    x: float, y: float, w: float, h: float,
+) -> None:
+    """Draw attack types and chase rules reference card."""
+    c.setLineWidth(1.8)
+    c.setStrokeColor(colors.black)
+    c.roundRect(x, y, w, h, radius=8, stroke=1, fill=0)
+
+    cur_y = y + h - 10
+
+    # Title
+    c.setFont("Helvetica-Bold", 13)
+    c.setFillColor(colors.black)
+    c.drawCentredString(x + w / 2, cur_y, "ATTACK TYPES")
+    cur_y -= 17
+
+    c.setLineWidth(0.8)
+    c.line(x + 8, cur_y, x + w - 8, cur_y)
+    cur_y -= 13
+
+    # Hit
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "HIT:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• Standard power attack")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Chase allowed on failed dig")
+    cur_y -= 14
+
+    # Tip
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "TIP:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• Soft attack (card ≤ tip threshold)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• No chase on failed dig")
+    cur_y -= 14
+
+    # Roll Shot
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "ROLL SHOT:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• Goes over block (block ignored)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Dug like tip (uses tip threshold)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Chase allowed on failed dig")
+    cur_y -= 14
+
+    # Heavy Spin
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "HEAVY SPIN:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• Bypasses block (block ignored)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• No chase on failed dig")
+    cur_y -= 14
+
+    # Seam Shot
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "SEAM SHOT:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• Deflection = instant point")
+
+
+def draw_blocking_reference(
+    c: canvas.Canvas,
+    x: float, y: float, w: float, h: float,
+) -> None:
+    """Draw blocking rules reference card."""
+    c.setLineWidth(1.8)
+    c.setStrokeColor(colors.black)
+    c.roundRect(x, y, w, h, radius=8, stroke=1, fill=0)
+
+    cur_y = y + h - 10
+
+    # Title
+    c.setFont("Helvetica-Bold", 13)
+    c.setFillColor(colors.black)
+    c.drawCentredString(x + w / 2, cur_y, "BLOCKING RULES")
+    cur_y -= 17
+
+    c.setLineWidth(0.8)
+    c.line(x + 8, cur_y, x + w - 8, cur_y)
+    cur_y -= 13
+
+    # Attack resolution
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "Attack Resolution:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7)
+    c.drawString(x + 12, cur_y, "Differential = Attack - Block")
+    cur_y -= 12
+
+    c.drawString(x + 12, cur_y, "• ≤ -1: STUFFED (blocker wins)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "•  0-2: DEFLECT (blocker side)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "•  3-4: DEFLECT (attacker side)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "•  5+:  KILL (attack vs dig)")
+    cur_y -= 14
+
+    # Quick set blocking
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "Quick Set Blocking:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• 1 blocker only (blind draw)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Cannot choose from hand")
+    cur_y -= 14
+
+    # Normal blocking
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "Normal Blocking:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• Choose cards from hand")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Up to max blockers per lane")
+    cur_y -= 14
+
+    # Odd/Even logic
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "Attack Card Parity:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• ODD attack → block ODD cards")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• EVEN attack → block EVEN cards")
+
+
+def draw_chase_reference(
+    c: canvas.Canvas,
+    x: float, y: float, w: float, h: float,
+) -> None:
+    """Draw chase rules reference card."""
+    c.setLineWidth(1.8)
+    c.setStrokeColor(colors.black)
+    c.roundRect(x, y, w, h, radius=8, stroke=1, fill=0)
+
+    cur_y = y + h - 10
+
+    # Title
+    c.setFont("Helvetica-Bold", 13)
+    c.setFillColor(colors.black)
+    c.drawCentredString(x + w / 2, cur_y, "CHASE RULES")
+    cur_y -= 17
+
+    c.setLineWidth(0.8)
+    c.line(x + 8, cur_y, x + w - 8, cur_y)
+    cur_y -= 13
+
+    # When chase happens
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "Chase Triggered When:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• Failed dig on HIT or ROLL SHOT")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Not triggered on failed tip")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Not triggered on quick sets")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Not triggered on heavy spin")
+    cur_y -= 14
+
+    # Two attempts
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "Two Chase Attempts:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "1. Adjacent player chase")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "2. Setter/Libero chase")
+    cur_y -= 14
+
+    # Chase outcomes
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "Chase Outcomes:")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + 12, cur_y, "• ARMED: Dig ≥ target")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "   → Chase team attacks")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• FREE BALL: Armed requirements")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "   not met → continue rally")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• FAILED: Total < target")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "   → Attacker wins point")
+
+
 def make_pdf(
-    cards: list[dict],
+    cards: List[dict],
     output_path: str,
-    teams: list[str] | None = None,
+    teams: Optional[List[str]] = None,
 ) -> None:
     PAGE_W, PAGE_H = letter   # 612 × 792 points
     MARGIN = 0.45 * inch      # ~32 pt
@@ -265,10 +535,30 @@ def make_pdf(
         cy = PAGE_H - MARGIN - (row + 1) * card_h - row * GUTTER
         draw_set_template_card(c, cx, cy, card_w, card_h, team_name)
 
+    # ── Reference cards (quick sets, attacks, blocking, chase) ────────────────
+    reference_cards = [
+        ("Quick Set Rules", draw_quick_set_reference),
+        ("Attack Types", draw_attack_types_reference),
+        ("Blocking Rules", draw_blocking_reference),
+        ("Chase Rules", draw_chase_reference),
+    ]
+    
+    total_team_cards = len(team_order)
+    for j, (ref_name, draw_func) in enumerate(reference_cards):
+        i = total_ability + total_team_cards + j
+        slot = i % (COLS * ROWS)
+        if slot == 0:
+            c.showPage()
+        col = slot % COLS
+        row = slot // COLS
+        cx = MARGIN + col * (card_w + GUTTER)
+        cy = PAGE_H - MARGIN - (row + 1) * card_h - row * GUTTER
+        draw_func(c, cx, cy, card_w, card_h)
+
     c.save()
-    total_cards = total_ability + len(team_order)
+    total_cards = total_ability + total_team_cards + len(reference_cards)
     pages = (total_cards + COLS * ROWS - 1) // (COLS * ROWS)
-    print(f"Wrote {total_ability} ability cards + {len(team_order)} team cards across {pages} page(s) → {output_path}")
+    print(f"Wrote {total_ability} ability cards + {total_team_cards} team cards + {len(reference_cards)} reference cards across {pages} page(s) → {output_path}")
 
 
 def main() -> None:
@@ -285,7 +575,7 @@ def main() -> None:
 
     team_map = load_team_assignments(args.data_dir)
 
-    cards: list[dict] = []
+    cards = []
     with open(args.input, newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             team = team_map.get(row["player_name"], "Unknown")

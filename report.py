@@ -44,7 +44,8 @@ EFFECT_WEIGHTS: Dict[str, float] = {
     # ── New game-modifying shot mechanics ─────────────────────────────────────
     "wipe_block":             4.0,   # instant point on card=1 into a block (flat)
     "no_chase":               5.0,   # kills with high cards skip chase entirely (flat)
-    "roll_shot":              6.0,   # block bypassed + no chase on fail (flat)
+    "roll_shot":              4.0,   # goes over block, dug like a tip (flat)
+    "heavy_spin":             6.0,   # block bypassed + no chase on fail (flat)
     "seam_shot":              5.0,   # deflect outcomes become instant attacker win (flat)
     "tip_threshold_delta":    3.0,   # per-point expansion of the tip range (on high set)
     # ── Hand/structural ability mechanics ─────────────────────────────────────
@@ -57,7 +58,7 @@ EFFECT_WEIGHTS: Dict[str, float] = {
 
 # Effects where effect_value is a boolean flag — use flat weight only
 BOOLEAN_EFFECTS = {"pierce_block", "single_block_only",
-                   "wipe_block", "no_chase", "roll_shot", "seam_shot",
+                   "wipe_block", "no_chase", "roll_shot", "heavy_spin", "seam_shot",
                    "hold_card", "hand_peek", "exchange_card"}
 
 # Multipliers for triggers that fire less often
@@ -292,7 +293,8 @@ def print_effect_legend():
         ("deflect_dig_threshold", "2.0 / pt × 0.20",               "deflects only"),
         ("tip_value_bonus",       "2.0 / pt × 0.20",               "tips only"),
         ("tip_threshold_delta",   "3.0 / pt × on_set",             "expands tip range on high set"),
-        ("roll_shot",             "6.0 flat",  "block bypassed + no chase on fail"),
+        ("roll_shot",             "4.0 flat",  "goes over block, dug like a tip"),
+        ("heavy_spin",            "6.0 flat",  "block bypassed + no chase on fail"),
         ("seam_shot",             "5.0 flat",  "deflect → instant attacker win"),
         ("no_chase",              "5.0 flat",  "kill dig fail skips chase"),
         ("wipe_block",            "4.0 flat",  "card=1 into block → instant win"),

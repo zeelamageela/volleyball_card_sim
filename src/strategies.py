@@ -289,8 +289,46 @@ class DummyStrategy(BaseStrategy):
                            wide_spread_threshold: int = 0) -> Dict[int, List[Card]]:
         if not hand or not attack_lanes:
             return {}
-        # Blind: put the top card on the first attacked lane
-        return {attack_lanes[0]: [hand[0]]}
+        
+        # Physical play rule: Use hand parity to determine double-block placement
+        # Count even vs odd cards in hand
+        even_count = sum(1 for c in hand if c.value % 2 == 0)
+        odd_count = len(hand) - even_count
+        
+        if len(attack_lanes) == 1:
+            # Single lane attacked: place all available cards (up to 3) on it
+            return {attack_lanes[0]: hand[:min(3, len(hand))]}
+        
+        elif len(attack_lanes) == 2:
+            # Two lanes: 3 total blockers (double + single)
+            # Majority even → double block rightmost (higher lane number)
+            # Majority odd → double block leftmost (lower lane number)
+            if even_count > odd_count:
+                # Double block rightmost lane, single block leftmost
+                double_lane = max(attack_lanes)
+                single_lane = min(attack_lanes)
+            else:
+                # Odd majority or tie → double block leftmost, single block rightmost
+                double_lane = min(attack_lanes)
+                single_lane = max(attack_lanes)
+            
+            if len(hand) >= 3:
+                return {
+                    double_lane: [hand[0], hand[1]],
+                    single_lane: [hand[2]]
+                }
+            elif len(hand) == 2:
+                return {double_lane: [hand[0], hand[1]]}
+            else:
+                return {double_lane: [hand[0]]}
+        
+        else:
+            # Three lanes: spread blockers (one per lane, first 3 cards)
+            result = {}
+            for i, lane in enumerate(sorted(attack_lanes)):
+                if i < len(hand):
+                    result[lane] = [hand[i]]
+            return result
 
     # ── Attack lane choice ─────────────────────────────────────────────────
     def choose_attack_lane(self, attack_cards: Dict[int, Card], block_layout: Dict[int, int]) -> int:

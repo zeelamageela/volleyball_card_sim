@@ -125,7 +125,7 @@ Each row is one ability for one player.
 
 **Triggers:** `on_serve`, `on_set`, `on_attack`, `on_block`, `on_block_deflection`, `on_dig`, `on_dig_success`, `on_dig_failure`, `on_chase`, `on_tip`
 
-**Effects:** `serve_value_bonus`, `set_value_delta`, `tip_threshold_delta`, `over_block_bonus`, `adjacent_block_bonus`, `pierce_block`, `seam_shot`, `roll_shot`, `dig_threshold`, `deflect_dig_threshold`, `chase_card_bonus`, `attack_value_bonus`, `single_block_only`, `hold_card`, `no_chase`, `wipe_block`
+**Effects:** `serve_value_bonus`, `set_value_delta`, `tip_threshold_delta`, `over_block_bonus`, `adjacent_block_bonus`, `pierce_block`, `seam_shot`, `roll_shot`, `heavy_spin`, `dig_threshold`, `deflect_dig_threshold`, `chase_card_bonus`, `attack_value_bonus`, `single_block_only`, `hold_card`, `no_chase`, `wipe_block`
 
 ### `data/team_a.csv` / `data/team_b.csv`
 

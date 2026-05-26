@@ -33,6 +33,10 @@ def parse_args() -> argparse.Namespace:
         epilog=__doc__,
     )
     p.add_argument(
+        "--player-cards", type=Path, default=CARDS_CSV,
+        metavar="CSV", help=f"Player cards CSV (default: {CARDS_CSV})",
+    )
+    p.add_argument(
         "--your-team", type=Path, default=Path("data/team_a.csv"),
         metavar="CSV", help="Your roster CSV (default: data/team_a.csv)",
     )
@@ -63,8 +67,8 @@ def main() -> None:
     args = parse_args()
 
     # ── Validate paths ────────────────────────────────────────────────────────
-    if not CARDS_CSV.exists():
-        sys.exit(f"Error: player-cards file not found: {CARDS_CSV}")
+    if not args.player_cards.exists():
+        sys.exit(f"Error: player-cards file not found: {args.player_cards}")
     if not args.your_team.exists():
         sys.exit(f"Error: your team file not found: {args.your_team}")
     if not args.ai_team.exists():
@@ -77,7 +81,7 @@ def main() -> None:
     master_rng = random.Random(seed)
 
     # ── Ability engines ───────────────────────────────────────────────────────
-    player_cards = load_player_cards(CARDS_CSV)
+    player_cards = load_player_cards(args.player_cards)
     engine_you = build_ability_engine(args.your_team, player_cards)
     engine_ai  = build_ability_engine(args.ai_team,   player_cards)
 

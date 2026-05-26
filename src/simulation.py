@@ -22,8 +22,8 @@ class SimStats:
     reason_counts: Dict[str, int]                 # tally of rally end-reasons
     scored_by: Dict[str, Dict[str, int]] = field(default_factory=dict)
     # scored_by[team][category] = rally-win count
-    # Categories: kills, aces, block_kills, block_reads, tips_free_balls,
-    #             deflect_outs, opp_errors, other
+    # Categories: hit_kills, tip_kills, aces, stuffs, deflections,
+    #             block_reads, opp_errors, other
 
     @property
     def win_rates(self) -> Dict[str, float]:
@@ -73,12 +73,12 @@ class SimStats:
 
         # ── Point-Scoring Efficiency (article metrics) ───────────────────────
         _CAT_LABELS = [
-            ("kills",          "Kills"),
+            ("hit_kills",      "Hit kills"),
+            ("tip_kills",      "Tip kills"),
             ("aces",           "Aces"),
-            ("block_kills",    "Block kills"),
+            ("stuffs",         "Stuffs"),
+            ("deflections",    "Deflections"),
             ("block_reads",    "Block reads"),
-            ("tips_free_balls","Tips / free balls"),
-            ("deflect_outs",   "Deflect-outs (draw-in)"),
             ("opp_errors",     "Opp. errors"),
             ("other",          "Other"),
         ]
@@ -160,8 +160,11 @@ class Simulation:
         }
 
         for _ in range(self._n_games):
-            team_a = Team(self._name_a, self._child_rng(), use_hand=self._use_hand_a)
-            team_b = Team(self._name_b, self._child_rng(), use_hand=self._use_hand_b)
+            # Use "dummy" deck for teams without hands (blind deck flips)
+            deck_type_a = "dummy" if not self._use_hand_a else "standard"
+            deck_type_b = "dummy" if not self._use_hand_b else "standard"
+            team_a = Team(self._name_a, self._child_rng(), use_hand=self._use_hand_a, deck_type=deck_type_a)
+            team_b = Team(self._name_b, self._child_rng(), use_hand=self._use_hand_b, deck_type=deck_type_b)
             # Attach ability engines (reset per-game state first)
             if self._engine_a:
                 self._engine_a.reset()
@@ -218,22 +221,24 @@ def _categorise_reason(reason: str) -> str:
 
 
 def _score_category(reason: str) -> str:
-    """Map a rally reason to a point-scoring category (article framework)."""
+    """Map a rally reason to a point-scoring category.
+    
+    Attacking points: hit_kills, tip_kills
+    Defensive points: stuffs, deflections
+    """
     lower = reason.lower()
     if "serve ace" in lower:
         return "aces"
     if "block read single attack lane" in lower:
         return "block_reads"
     if "stuffed" in lower:
-        return "block_kills"
-    if "deflection out" in lower:
-        return "deflect_outs"
-    if "tip not dug" in lower:
-        return "tips_free_balls"
-    if "roll shot" in lower or "deflect not dug" in lower or "seam shot" in lower:
-        return "tips_free_balls"
-    if "wipe" in lower or "no chase" in lower or "kill" in lower:
-        return "kills"
+        return "stuffs"
+    if "deflect not dug" in lower:
+        return "deflections"
+    if "tip not dug" in lower or "roll shot" in lower or "seam shot" in lower:
+        return "tip_kills"
+    if "wipe" in lower or "no chase" in lower or "kill" in lower or "dig failed" in lower:
+        return "hit_kills"
     if "offensive confusion" in lower or "attacker-attacker" in lower \
             or "front+back" in lower or "all attacks canceled" in lower:
         return "opp_errors"
