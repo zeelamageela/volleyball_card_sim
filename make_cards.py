@@ -39,6 +39,78 @@ TEAM_COLORS = {
     "Unknown": colors.HexColor("#E8E8E8"),  # neutral
 }
 
+# ── Team-specific set templates ──────────────────────────────────────────────
+TEAM_SET_TEMPLATES = {
+    "Blitz": {
+        "normal": [
+            ("1-3",  "OH · MB",        "—",         "2"),
+            ("4-5",  "OH · MB",        "OH/MB/OPP", "3"),
+            ("6-7",  "MB · OPP",       "OH/MB/OPP", "3"),
+            ("8-9",  "OH · OPP",       "OH/MB/OPP", "4"),
+            ("10",   "OH · OPP",       "OH/MB/OPP", "4"),
+        ],
+        "broken": [
+            ("1-3",  "OH",       "—",       "1"),
+            ("4-7",  "OH · OPP", "MB only", "2"),
+            ("8-10", "OH · OPP", "MB only", "2"),
+        ],
+    },
+    "Grind": {
+        "normal": [
+            ("1-3",  "OH · MB · OPP",  "—",         "3"),
+            ("4-5",  "OH · MB",        "OH/MB/OPP", "3"),
+            ("6-7",  "MB · OPP",       "OH/MB/OPP", "3"),
+            ("8-9",  "OH · OPP",       "OH/MB/OPP", "4"),
+            ("10",   "OH · MB · OPP",  "OH/MB/OPP", "4"),
+        ],
+        "broken": [
+            ("1-3",  "OH · MB",   "MB only", "2"),
+            ("4-7",  "OH · OPP",  "MB only", "2"),
+            ("8-10", "MB · OPP",  "MB only", "2"),
+        ],
+    },
+    "Easy": {
+        "normal": [
+            ("1-3",  "OH · MB",   "—",    "2"),
+            ("4-5",  "OH · MB",   "—",    "2"),
+            ("6-7",  "MB · OPP",  "OPP",  "2"),
+            ("8-9",  "OH · OPP",  "OPP",  "3"),
+            ("10",   "OH · OPP",  "OH/OPP", "3"),
+        ],
+        "broken": [
+            ("1-3",  "OH",     "—",       "1"),
+            ("4-7",  "OH",     "—",       "1"),
+            ("8-10", "OH · OPP", "—",     "2"),
+        ],
+    },
+    "Medium": {
+        "normal": [
+            ("1-4",  "OH · MB · OPP",  "—",         "3"),
+            ("5-6",  "OH · MB",        "OH/MB/OPP", "3"),
+            ("7-8",  "MB · OPP",       "OH/MB/OPP", "3"),
+            ("9-10", "OH · OPP",       "OH/MB/OPP", "4"),
+        ],
+        "broken": [
+            ("1-4",  "OH · MB",   "MB only", "2"),
+            ("5-7",  "OH · OPP",  "MB only", "2"),
+            ("8-10", "MB · OPP",  "MB only", "2"),
+        ],
+    },
+    "Hard": {
+        "normal": [
+            ("1-4",  "OH · MB · OPP",  "MB only",   "3"),
+            ("5-6",  "OH · MB · OPP",  "OH/MB/OPP", "4"),
+            ("7-8",  "MB · OPP",       "OH/MB/OPP", "4"),
+            ("9-10", "OH · OPP",       "OH/MB/OPP", "5"),
+        ],
+        "broken": [
+            ("1-4",  "OH · MB",   "MB only", "2"),
+            ("5-7",  "OH · OPP",  "MB only", "2"),
+            ("8-10", "MB · OPP",  "OH/MB/OPP", "3"),
+        ],
+    },
+}
+
 # ── Role abbreviation labels ─────────────────────────────────────────────────
 ROLE_LABEL = {
     "Setter": "Setter",
@@ -65,10 +137,13 @@ def load_team_assignments(data_dir: str):
 def draw_card(
     c: canvas.Canvas,
     x: float, y: float, w: float, h: float,
-    player_name: str, role: str, ability_name: str,
-    description: str, team: str,
+    player_name: str, role: str, abilities: List[dict],
+    team: str,
 ) -> None:
-    """Draw one card at lower-left corner (x, y) with width w and height h."""
+    """Draw one card at lower-left corner (x, y) with width w and height h.
+    
+    abilities: list of dicts with 'ability_name' and 'description' keys
+    """
     bg = TEAM_COLORS.get(team, TEAM_COLORS["Unknown"])
     role_full = ROLE_LABEL.get(role, role)
 
@@ -100,33 +175,29 @@ def draw_card(
     c.setStrokeColor(colors.black)
     c.line(x + 10, y + h - header_h + 2, x + w - 10, y + h - header_h + 2)
 
-    # ── Ability name (bold, centred, just below divider) ─────────────────────
-    ability_y = y + h - header_h - 15
-    c.setFont("Helvetica-Bold", 10)
-    c.setFillColor(colors.black)
-    c.drawCentredString(x + w / 2, ability_y, ability_name)
-
-    # ── Thin rule below ability name ─────────────────────────────────────────
-    c.setLineWidth(0.4)
-    c.setStrokeColor(colors.HexColor("#666666"))
-    c.line(x + 18, ability_y - 5, x + w - 18, ability_y - 5)
-
-    # ── Description (wrapped, centred, small) ────────────────────────────────
-    desc_top = ability_y - 10
-    desc_h_avail = desc_top - y - 6
+    # ── Abilities (listed with bullet points) ────────────────────────────────
+    body_top = y + h - header_h - 10
+    body_h_avail = body_top - y - 6
+    
+    # Build abilities text with bullet points
+    abilities_text = []
+    for ability in abilities:
+        abilities_text.append(f"<b>• {ability['ability_name']}:</b> {ability['description']}")
+    
+    combined_text = "<br/>".join(abilities_text)
 
     style = ParagraphStyle(
-        "desc",
+        "abilities",
         fontName="Helvetica",
-        fontSize=8.5,
-        leading=12,
+        fontSize=7.5,
+        leading=10,
         alignment=TA_CENTER,
         textColor=colors.black,
     )
-    para = Paragraph(description, style)
-    _, ph = para.wrap(w - 18, desc_h_avail)
-    # Vertically centre the description block
-    para.drawOn(c, x + 9, y + 4 + max(0, (desc_h_avail - ph) / 2))
+    para = Paragraph(combined_text, style)
+    _, ph = para.wrap(w - 16, body_h_avail)
+    # Vertically centre the abilities block
+    para.drawOn(c, x + 8, y + 4 + max(0, (body_h_avail - ph) / 2))
 
 
 def draw_set_template_card(
@@ -135,6 +206,9 @@ def draw_set_template_card(
     team_name: str,
 ) -> None:
     """Draw a set-template reference card showing normal and broken-play set rules."""
+    # Get team-specific template or default to Grind
+    template = TEAM_SET_TEMPLATES.get(team_name, TEAM_SET_TEMPLATES["Grind"])
+    
     # ── Card border ──────────────────────────────────────────────────────────
     c.setLineWidth(1.8)
     c.setStrokeColor(colors.black)
@@ -186,13 +260,7 @@ def draw_set_template_card(
             cur_y -= 9
 
     # ── Normal set table ──────────────────────────────────────────────────────
-    section("NORMAL SET  (setter sets)", [
-        ("1-3",  "OH · MB · OPP",  "—",         "3"),
-        ("4-5",  "OH · MB",        "OH/MB/OPP", "3"),
-        ("6-7",  "MB · OPP",       "OH/MB/OPP", "3"),
-        ("8-9",  "OH · OPP",       "OH/MB/OPP", "4"),
-        ("10",   "OH · MB · OPP",  "OH/MB/OPP", "4"),
-    ])
+    section("NORMAL SET  (setter sets)", template["normal"])
 
     cur_y -= 6
     c.setLineWidth(0.6)
@@ -200,11 +268,7 @@ def draw_set_template_card(
     cur_y -= 14
 
     # ── Broken-play set table ─────────────────────────────────────────────────
-    section("BROKEN PLAY  (non-setter sets)", [
-        ("1-3",  "OH · MB",   "MB only", "2"),
-        ("4-7",  "OH · OPP",  "MB only", "1"),
-        ("8-10", "MB · OPP",  "MB only", "2"),
-    ])
+    section("BROKEN PLAY  (non-setter sets)", template["broken"])
 
     cur_y -= 6
     c.setLineWidth(0.6)
@@ -517,7 +581,7 @@ def make_pdf(
         draw_card(
             c, cx, cy, card_w, card_h,
             card["player_name"], card["role"],
-            card["ability_name"], card["description"],
+            card["abilities"],
             card["team"],
         )
 
@@ -558,7 +622,7 @@ def make_pdf(
     c.save()
     total_cards = total_ability + total_team_cards + len(reference_cards)
     pages = (total_cards + COLS * ROWS - 1) // (COLS * ROWS)
-    print(f"Wrote {total_ability} ability cards + {total_team_cards} team cards + {len(reference_cards)} reference cards across {pages} page(s) → {output_path}")
+    print(f"Wrote {total_ability} player cards + {total_team_cards} team cards + {len(reference_cards)} reference cards across {pages} page(s) → {output_path}")
 
 
 def main() -> None:
@@ -575,19 +639,33 @@ def main() -> None:
 
     team_map = load_team_assignments(args.data_dir)
 
-    cards = []
+    # Group abilities by player
+    from collections import defaultdict
+    players = defaultdict(lambda: {"role": None, "team": None, "abilities": []})
+    
     with open(args.input, newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             team = team_map.get(row["player_name"], "Unknown")
             if args.teams and team not in args.teams:
                 continue
-            cards.append({
-                "player_name": row["player_name"],
-                "role":        row["role"],
+            
+            player_name = row["player_name"]
+            players[player_name]["role"] = row["role"]
+            players[player_name]["team"] = team
+            players[player_name]["abilities"].append({
                 "ability_name": row["ability_name"],
                 "description": row["description"],
-                "team":        team,
             })
+    
+    # Convert to list of cards (one per player)
+    cards = []
+    for player_name, data in players.items():
+        cards.append({
+            "player_name": player_name,
+            "role": data["role"],
+            "abilities": data["abilities"],
+            "team": data["team"],
+        })
 
     if not cards:
         print("No cards matched — check your --teams filter.")
