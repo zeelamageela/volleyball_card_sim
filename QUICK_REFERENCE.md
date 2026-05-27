@@ -33,18 +33,17 @@
 - Attack > Block (0-2 diff) → **Deflect** (tip dig)
 - Block ≥ Attack → **Stuffed** (defender scores)
 
-## 🔄 Matching System
+## 🔄 Matching System (27% of rallies)
 
-**Blocker-Blocker Match:** 2 identical block values in same lane → **Cards cancel, lane becomes unblocked**
+**Blocker-Blocker Match:** 2 identical block values → **Defender wins** (~14% of rallies)
 
-**Attacker-Blocker Match:** Attacker matches blocker value → **Lane ELIMINATED (cannot be chosen)**
-- Attacker must choose from remaining non-matched lanes
-- If ALL lanes matched → Defender wins ("Attacker-blocker match — lane eliminated")
-- ~12% of rallies end this way
+**Attacker-Blocker Match:** Attacker matches blocker → **Lane eliminated**; attacker chooses remaining lanes (~12% of rallies)
 
-**Attacker-Attacker Match:** Front+back same value in same lane → **Lane eliminated, defender wins**
+**Attacker-Attacker Match:** Front+back same value → **Defender wins** (<1% of rallies)
 
-**Multi-Attacker Partial Match:** Some attackers match blockers in same lane → **Matched cards removed, remaining cards stay active**
+**Partial Match:** Multi-attacker, some match blockers → **Cards removed, continue**
+
+**Multi-Lane:** Processed high-to-low; if all lanes are eliminated, **Defender wins**
 
 ## ⚡ Active Abilities (50+ total)
 

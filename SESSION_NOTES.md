@@ -99,6 +99,46 @@ Interpretation: passives are functioning, but current designs likely need strong
 
 ---
 
+# Session Handoff - May 27, 2026
+
+Status: Latest changes are in place. Next session should start from lane-column template cleanup, deck-reference printing, and any future numbered-position discussion.
+
+---
+
+### What changed today
+
+1. Team passives are implemented in gameplay:
+- Deep Bench, Safe Setter, Back Court Threat, Elite Draw
+
+2. Deck handling was expanded:
+- Standard deck stays the baseline for hand-play teams.
+- Dummy deck is now intentionally top-heavy for blind-play teams.
+
+3. Printable cards were updated:
+- All rostered players print, including players with no abilities.
+- Team template cards show passives.
+- Separate deck makeup reference card was added.
+
+4. Set-template documentation was improved:
+- Set names are shown.
+- Quickset targets are shown.
+- Lane-specific front/back columns are now used.
+- Max hitters terminology is used instead of max blockers.
+
+5. Validation was run:
+- `python3 test_passives.py`
+- `python3 test_balance_passives.py`
+- `python3 make_cards.py`
+- `python3 make_cards.py --output all_player_cards.pdf`
+
+### Important notes
+
+- The deck overhaul is a major balance lever, not just a doc change.
+- The separate deck makeup card is the preferred place for deck breakdown now.
+- A numbered volleyball position system is still a future idea, not implemented yet.
+
+---
+
 # Phase 5 Development Session Notes
 
 **Date:** May 2026  

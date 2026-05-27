@@ -34,6 +34,11 @@
 - Current dummy counts in code: 1x2, 2x2, 3x2, 4x3, 5x2, 6x2, 7x4, 8x5, 9x4, 10x2.
 - Current distribution target for dummy deck: Low 32% / Mid 14% / High 54%.
 
+6. Template-card formatting was refined after this handoff was drafted:
+- Set rows now use explicit lane columns instead of a compact front/back list.
+- Set names and quickset target notation are shown per row.
+- A separate deck makeup reference card was added to the printable reference set.
+
 ### Files changed in this continuation
 
 - src/players.py
