@@ -158,12 +158,20 @@ class GridPlayer:
 
 
 class Team:
-    def __init__(self, name: str, rng: random.Random, use_hand: bool = True, deck_type: str = "standard") -> None:
+    def __init__(
+        self, 
+        name: str, 
+        rng: random.Random, 
+        use_hand: bool = True, 
+        deck_type: str = "standard",
+        passive_ability: Optional[str] = None
+    ) -> None:
         self.name = name
         self.deck = Deck(rng, deck_type=deck_type)
         self.hand: List[Card] = []
         self.held_card: Optional[Card] = None
         self.use_hand = use_hand
+        self.passive_ability = passive_ability
         self.ability_engine: Optional[AbilityEngine] = None
         self.players: List[GridPlayer] = [
             GridPlayer(PlayerRole.SETTER, 1),
@@ -187,7 +195,11 @@ class Team:
     def draw_starting_hand(self) -> None:
         if not self.use_hand:
             return
-        self.hand = [self.deck.draw() for _ in range(HAND_SIZE)]
+        hand_size = HAND_SIZE
+        # Passive ability: Deep Bench
+        if self.passive_ability == "Deep Bench":
+            hand_size += 1
+        self.hand = [self.deck.draw() for _ in range(hand_size)]
 
     def refill_hand(self) -> None:
         """Draw cards until hand is back to HAND_SIZE (plus any ability modifier)."""
@@ -198,6 +210,9 @@ class Team:
             self.hand.append(self.held_card)
             self.held_card = None
         max_size = HAND_SIZE
+        # Passive ability: Deep Bench
+        if self.passive_ability == "Deep Bench":
+            max_size += 1
         if self.ability_engine:
             max_size += self.ability_engine.hand_size_modifier()
         while len(self.hand) < max_size:
@@ -223,6 +238,23 @@ class Team:
     def discard_card(self, card: Card) -> None:
         """Send a previously committed card to the discard pile."""
         self.deck.discard(card)
+
+    def draw_for_action(self) -> Card:
+        """
+        Draw a card for any action (serve/block/dig/attack).
+        Passive ability: Elite Draw - draw 2, keep highest.
+        """
+        if self.passive_ability == "Elite Draw" and self.deck.draw_pile_size >= 2:
+            card1 = self.deck.draw()
+            card2 = self.deck.draw()
+            if card1.value >= card2.value:
+                self.deck.discard(card2)
+                return card1
+            else:
+                self.deck.discard(card1)
+                return card2
+        else:
+            return self.deck.draw()
 
     def discard_many(self, cards: List[Card]) -> None:
         for c in cards:

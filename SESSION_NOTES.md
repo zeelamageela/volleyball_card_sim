@@ -1,3 +1,104 @@
+## Session Handoff - May 27, 2026
+
+Status: Completed core implementation and print pipeline updates. Next session can start from balance tuning and CSV runtime wiring.
+
+---
+
+### What we completed today
+
+1. Implemented team passive abilities in gameplay code:
+- Deep Bench (Grind): team hand size becomes 6.
+- Safe Setter (Easy): setter dig can avoid broken play.
+- Back Court Threat (Medium): back-row attacks ignore first blocker.
+- Elite Draw (Hard): action draws take 2 cards, keep the higher.
+
+2. Added passive-aware draw plumbing:
+- Team gained passive_ability field.
+- Team gained draw_for_action() to centralize draw behavior.
+- Rally phases now use draw_for_action() where appropriate for serve, receive, set, dig, blind attacks, and block draws.
+
+3. Added passive display on printable team template cards:
+- Set template card now includes a PASSIVE ABILITY section for active passives.
+
+4. Updated card generation so all rostered players print:
+- make_cards now loads all players from roster CSV files first.
+- It overlays ability rows from player_cards.csv onto those players.
+- Players without abilities now get a normal card with the text: No special abilities.
+
+5. Generated updated PDFs:
+- ability_cards.pdf (default output)
+- ability_cards_with_passives.pdf
+- all_player_cards.pdf
+
+6. Added validation scripts for passives:
+- test_passives.py (feature smoke tests)
+- test_balance_passives.py (quick 100-game passive comparison)
+
+7. Applied major deck-system changes (core balance lever):
+- Added deck type support in engine flow (standard vs dummy).
+- Standard deck kept strategic baseline for hand-play teams.
+- Dummy deck was redesigned for blind-play teams with stronger top-end concentration.
+- Current dummy deck counts in code:
+  - 1x2, 2x2, 3x2, 4x3, 5x2, 6x2, 7x4, 8x5, 9x4, 10x2
+  - Effective shape: lower mid density, higher 7-10 pressure for non-hand play.
+- Team construction now uses deck_type to assign these distributions by team style.
+
+---
+
+### Key outcomes from today
+
+1. Printing request addressed:
+- Card printing now includes no-ability players.
+- Player cards increased from 17 to 30.
+
+2. Passive logic is live in simulation flow:
+- Feature-level tests ran successfully.
+
+3. Quick balance check showed weak passive leverage at current values:
+- Easy: 42% without passive vs 40% with Safe Setter.
+- Medium: 55% without passive vs 55% with Back Court Threat.
+- Hard: 92% without passive vs 89% with Elite Draw.
+
+Interpretation: passives are functioning, but current designs likely need stronger impact if balance movement is desired.
+
+4. Deck changes remain one of the largest gameplay shifts in the project:
+- Dummy teams are no longer only "ability-tuned"; they now also gain structural power from deck composition.
+- This was a deliberate design move to support blind-flip viability without relying only on flat numeric buffs.
+
+---
+
+### Files touched today
+
+- src/players.py
+- src/game.py
+- make_cards.py
+- data/team_passives.csv
+- data/set_templates.csv
+- data/teams.csv
+- test_passives.py
+- test_balance_passives.py
+- SESSION_NOTES_phase6.md
+
+---
+
+### Recommended starting point next session
+
+1. Run larger-sample balance tests (1000 to 10000 games) before changing numbers.
+2. Decide whether to buff current passives or swap to stronger structural passives.
+3. Choose and implement Blitz passive (still marked TBD).
+4. Optionally wire teams.csv and team_passives.csv into runtime setup so main/play/report do not need manual passive assignment.
+
+---
+
+### Useful commands
+
+- python3 make_cards.py
+- python3 make_cards.py --output all_player_cards.pdf
+- python3 test_passives.py
+- python3 test_balance_passives.py
+
+---
+
 # Phase 5 Development Session Notes
 
 **Date:** May 2026  

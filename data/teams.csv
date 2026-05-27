@@ -1,0 +1,6 @@
+team_name,roster_file,set_template,passive_ability,deck_type,use_hand
+Blitz,team_blitz.csv,Blitz,TBD,standard,true
+Grind,team_grind.csv,Grind,Deep Bench,standard,true
+Easy,team_dummy_easy.csv,Easy,Safe Setter,dummy,false
+Medium,team_dummy_medium.csv,Medium,Back Court Threat,dummy,false
+Hard,team_dummy_hard.csv,Hard,Elite Draw,dummy,false

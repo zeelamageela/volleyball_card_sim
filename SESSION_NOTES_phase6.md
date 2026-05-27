@@ -5,6 +5,93 @@
 
 ---
 
+## Phase 7 Continuation Handoff (May 27, 2026)
+
+### What was completed this session
+
+1. Team passive abilities were implemented in game flow and team model:
+- Deep Bench (Grind): 6-card hand size support
+- Safe Setter (Easy): setter digs do not force broken play
+- Back Court Threat (Medium): back-row attacks ignore first blocker
+- Elite Draw (Hard): draw 2, keep higher for action draws
+
+2. Passive support plumbing was added:
+- Team now accepts passive_ability and exposes draw_for_action()
+- Rally action draw paths now use draw_for_action() (serve/receive/set/dig/block/attack blind draws)
+
+3. Card generation was expanded to include players with no abilities:
+- make_cards now loads all roster players first, then overlays ability rows
+- no-ability players now render with "No special abilities"
+- this increased player cards from 17 to 30
+
+4. Team template cards now print passive text:
+- passive block appears under set template tables for non-TBD teams
+
+5. Major deck redesign was finalized and validated:
+- Engine supports deck_type selection (standard vs dummy).
+- Standard deck remains baseline for hand-play teams.
+- Dummy deck is intentionally top-heavy for blind-play teams.
+- Current dummy counts in code: 1x2, 2x2, 3x2, 4x3, 5x2, 6x2, 7x4, 8x5, 9x4, 10x2.
+- Current distribution target for dummy deck: Low 32% / Mid 14% / High 54%.
+
+### Files changed in this continuation
+
+- src/players.py
+- src/game.py
+- make_cards.py
+- data/team_passives.csv
+- data/set_templates.csv
+- data/teams.csv
+- test_passives.py
+- test_balance_passives.py
+
+### Artifacts generated
+
+- ability_cards.pdf (updated default output)
+- ability_cards_with_passives.pdf
+- all_player_cards.pdf
+
+### Validation run summary
+
+1. Passive smoke test script:
+- command: python3 test_passives.py
+- result: all four passive checks executed successfully
+
+2. Balance comparison script:
+- command: python3 test_balance_passives.py
+- result snapshot (100 games each, Blitz vs dummy):
+  - Easy: 42% no passive vs 40% with Safe Setter
+  - Medium: 55% no passive vs 55% with Back Court Threat
+  - Hard: 92% no passive vs 89% with Elite Draw
+
+### Important observations
+
+1. Passives currently have low or mixed impact on win rates in sampled runs.
+2. Elite Draw appears to improve single-draw quality, but did not improve macro win rate in the 100-game sample.
+3. Make-cards behavior now aligns with physical-print needs: all rostered players get a card.
+4. Deck composition is now a primary balance tool (not only abilities), especially for dummy teams.
+
+### Ready-to-run commands next session
+
+- python3 make_cards.py
+- python3 make_cards.py --output all_player_cards.pdf
+- python3 test_passives.py
+- python3 test_balance_passives.py
+
+### Suggested first tasks next session
+
+1. Run larger balance samples (1000-10000 games) before tuning passives.
+2. Decide whether passive effects should be stronger or replaced with more structural effects.
+3. Decide Blitz passive (currently TBD in team_passives.csv and teams.csv).
+4. If desired, wire CSV-driven team/passive loading in main/play/report so passives are not only test-script configured.
+
+### Open decision points
+
+1. Keep current passive strengths for flavor, or tune for measurable balance effect.
+2. Confirm whether legacy deleted roster/test CSV files in data/ are intentional before cleanup.
+
+---
+
 ## Session Goals Achieved
 
 1. **Blitz vs Grind PvP balance confirmed** — 54.2% Blitz wins (target ~50–57%) ✅

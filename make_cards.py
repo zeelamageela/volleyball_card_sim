@@ -43,73 +43,88 @@ TEAM_COLORS = {
 TEAM_SET_TEMPLATES = {
     "Blitz": {
         "normal": [
-            ("1-3",  "OH · MB",        "—",         "2"),
-            ("4-5",  "OH · MB",        "OH/MB/OPP", "3"),
-            ("6-7",  "MB · OPP",       "OH/MB/OPP", "3"),
-            ("8-9",  "OH · OPP",       "OH/MB/OPP", "4"),
-            ("10",   "OH · OPP",       "OH/MB/OPP", "4"),
+            ("Flash", "1-3",  "OH/MB", "OH · MB",        "—",         "2"),
+            ("Pulse", "4-5",  "—",     "OH · MB",        "OH/MB/OPP", "3"),
+            ("Surge", "6-7",  "—",     "MB · OPP",       "OH/MB/OPP", "3"),
+            ("Pin",   "8-9",  "—",     "OH · OPP",       "OH/MB/OPP", "4"),
+            ("Blaze", "10",   "—",     "OH · OPP",       "OH/MB/OPP", "4"),
         ],
         "broken": [
-            ("1-3",  "OH",       "—",       "1"),
-            ("4-7",  "OH · OPP", "MB only", "2"),
-            ("8-10", "OH · OPP", "MB only", "2"),
+            ("Scramble A", "1-3",  "OH", "OH",       "—",       "1"),
+            ("Scramble B", "4-7",  "—",  "OH · OPP", "MB only", "2"),
+            ("Scramble C", "8-10", "—",  "OH · OPP", "MB only", "2"),
         ],
     },
     "Grind": {
         "normal": [
-            ("1-3",  "OH · MB · OPP",  "—",         "3"),
-            ("4-5",  "OH · MB",        "OH/MB/OPP", "3"),
-            ("6-7",  "MB · OPP",       "OH/MB/OPP", "3"),
-            ("8-9",  "OH · OPP",       "OH/MB/OPP", "4"),
-            ("10",   "OH · MB · OPP",  "OH/MB/OPP", "4"),
+            ("Wall",    "1-3",  "OH/MB/OPP", "OH · MB · OPP",  "—",         "3"),
+            ("Anchor",  "4-5",  "—",          "OH · MB",        "OH/MB/OPP", "3"),
+            ("Clamp",   "6-7",  "—",          "MB · OPP",       "OH/MB/OPP", "3"),
+            ("Grind",   "8-9",  "—",          "OH · OPP",       "OH/MB/OPP", "4"),
+            ("Siege",   "10",   "—",          "OH · MB · OPP",  "OH/MB/OPP", "4"),
         ],
         "broken": [
-            ("1-3",  "OH · MB",   "MB only", "2"),
-            ("4-7",  "OH · OPP",  "MB only", "2"),
-            ("8-10", "MB · OPP",  "MB only", "2"),
+            ("Reset A", "1-3",  "OH/MB", "OH · MB",   "MB only", "2"),
+            ("Reset B", "4-7",  "—",     "OH · OPP",  "MB only", "2"),
+            ("Reset C", "8-10", "—",     "MB · OPP",  "MB only", "2"),
         ],
     },
     "Easy": {
         "normal": [
-            ("1-3",  "OH · MB",   "—",    "2"),
-            ("4-5",  "OH · MB",   "—",    "2"),
-            ("6-7",  "MB · OPP",  "OPP",  "2"),
-            ("8-9",  "OH · OPP",  "OPP",  "3"),
-            ("10",   "OH · OPP",  "OH/OPP", "3"),
+            ("Simple A", "1-3",  "OH/MB", "OH · MB",   "—",      "2"),
+            ("Simple B", "4-5",  "—",     "OH · MB",   "—",      "2"),
+            ("Simple C", "6-7",  "—",     "MB · OPP",  "OPP",    "2"),
+            ("Simple D", "8-9",  "—",     "OH · OPP",  "OPP",    "3"),
+            ("Simple E", "10",   "—",     "OH · OPP",  "OH/OPP", "3"),
         ],
         "broken": [
-            ("1-3",  "OH",     "—",       "1"),
-            ("4-7",  "OH",     "—",       "1"),
-            ("8-10", "OH · OPP", "—",     "2"),
+            ("Panic A", "1-3",  "OH", "OH",       "—",       "1"),
+            ("Panic B", "4-7",  "—",  "OH",       "—",       "1"),
+            ("Panic C", "8-10", "—",  "OH · OPP", "—",       "2"),
         ],
     },
     "Medium": {
         "normal": [
-            ("1-4",  "OH · MB · OPP",  "—",         "3"),
-            ("5-6",  "OH · MB",        "OH/MB/OPP", "3"),
-            ("7-8",  "MB · OPP",       "OH/MB/OPP", "3"),
-            ("9-10", "OH · OPP",       "OH/MB/OPP", "4"),
+            ("Tempo A", "1-4",  "OH/MB/OPP", "OH · MB · OPP",  "—",         "3"),
+            ("Tempo B", "5-6",  "—",          "OH · MB",        "OH/MB/OPP", "3"),
+            ("Tempo C", "7-8",  "—",          "MB · OPP",       "OH/MB/OPP", "3"),
+            ("Tempo D", "9-10", "—",          "OH · OPP",       "OH/MB/OPP", "4"),
         ],
         "broken": [
-            ("1-4",  "OH · MB",   "MB only", "2"),
-            ("5-7",  "OH · OPP",  "MB only", "2"),
-            ("8-10", "MB · OPP",  "MB only", "2"),
+            ("Recovery A", "1-4",  "OH/MB", "OH · MB",   "MB only", "2"),
+            ("Recovery B", "5-7",  "—",     "OH · OPP",  "MB only", "2"),
+            ("Recovery C", "8-10", "—",     "MB · OPP",  "MB only", "2"),
         ],
     },
     "Hard": {
         "normal": [
-            ("1-4",  "OH · MB · OPP",  "MB only",   "3"),
-            ("5-6",  "OH · MB · OPP",  "OH/MB/OPP", "4"),
-            ("7-8",  "MB · OPP",       "OH/MB/OPP", "4"),
-            ("9-10", "OH · OPP",       "OH/MB/OPP", "5"),
+            ("Elite A", "1-4",  "OH/MB/OPP", "OH · MB · OPP",  "MB only",   "3"),
+            ("Elite B", "5-6",  "—",          "OH · MB · OPP",  "OH/MB/OPP", "4"),
+            ("Elite C", "7-8",  "—",          "MB · OPP",       "OH/MB/OPP", "4"),
+            ("Elite D", "9-10", "—",          "OH · OPP",       "OH/MB/OPP", "5"),
         ],
         "broken": [
-            ("1-4",  "OH · MB",   "MB only", "2"),
-            ("5-7",  "OH · OPP",  "MB only", "2"),
-            ("8-10", "MB · OPP",  "OH/MB/OPP", "3"),
+            ("Pressure A", "1-4",  "OH/MB", "OH · MB",   "MB only",   "2"),
+            ("Pressure B", "5-7",  "—",     "OH · OPP",  "MB only",   "2"),
+            ("Pressure C", "8-10", "—",     "MB · OPP",  "OH/MB/OPP", "3"),
         ],
     },
 }
+
+# ── Team passive abilities ────────────────────────────────────────────────────
+TEAM_PASSIVES = {
+    "Blitz": None,  # TBD
+    "Grind": "Deep Bench: Start with 6 cards instead of 5.",
+    "Easy": "Safe Setter: Digs by the setter never cause broken play.",
+    "Medium": "Back Court Threat: Back-row attacks ignore the first blocker.",
+    "Hard": "Elite Draw: Draw 2 cards for any action, keep the higher value.",
+}
+
+# ── Deck reference (for dedicated reference card) ───────────────────────────
+PLAYER_DECK_COUNTS = "1x1 2x2 3x3 4x4 5x4 6x4 7x4 8x3 9x2 10x1"
+DUMMY_DECK_COUNTS = "1x2 2x2 3x2 4x3 5x2 6x2 7x4 8x5 9x4 10x2"
+PLAYER_DECK_SPLIT = "Low 36% · Mid 29% · High 36%"
+DUMMY_DECK_SPLIT = "Low 32% · Mid 14% · High 54%"
 
 # ── Role abbreviation labels ─────────────────────────────────────────────────
 ROLE_LABEL = {
@@ -179,25 +194,31 @@ def draw_card(
     body_top = y + h - header_h - 10
     body_h_avail = body_top - y - 6
     
-    # Build abilities text with bullet points
-    abilities_text = []
-    for ability in abilities:
-        abilities_text.append(f"<b>• {ability['ability_name']}:</b> {ability['description']}")
-    
-    combined_text = "<br/>".join(abilities_text)
+    if not abilities:
+        # No abilities - show placeholder text
+        c.setFont("Helvetica-Oblique", 8)
+        c.setFillColor(colors.HexColor("#666666"))
+        c.drawCentredString(x + w / 2, y + h / 2 - 5, "No special abilities")
+    else:
+        # Build abilities text with bullet points
+        abilities_text = []
+        for ability in abilities:
+            abilities_text.append(f"<b>• {ability['ability_name']}:</b> {ability['description']}")
+        
+        combined_text = "<br/>".join(abilities_text)
 
-    style = ParagraphStyle(
-        "abilities",
-        fontName="Helvetica",
-        fontSize=7.5,
-        leading=10,
-        alignment=TA_CENTER,
-        textColor=colors.black,
-    )
-    para = Paragraph(combined_text, style)
-    _, ph = para.wrap(w - 16, body_h_avail)
-    # Vertically centre the abilities block
-    para.drawOn(c, x + 8, y + 4 + max(0, (body_h_avail - ph) / 2))
+        style = ParagraphStyle(
+            "abilities",
+            fontName="Helvetica",
+            fontSize=7.5,
+            leading=10,
+            alignment=TA_CENTER,
+            textColor=colors.black,
+        )
+        para = Paragraph(combined_text, style)
+        _, ph = para.wrap(w - 16, body_h_avail)
+        # Vertically centre the abilities block
+        para.drawOn(c, x + 8, y + 4 + max(0, (body_h_avail - ph) / 2))
 
 
 def draw_set_template_card(
@@ -233,15 +254,35 @@ def draw_set_template_card(
     cur_y -= 10
 
     # ── Helper to draw a section ──────────────────────────────────────────────
+    def _lane_map_from_front(front: str) -> tuple[str, str, str]:
+        lane_roles = {"OH": "—", "MB": "—", "OPP": "—"}
+        if front and front != "—":
+            tokens = [t.strip() for t in front.split("·")]
+            for t in tokens:
+                if t in lane_roles:
+                    lane_roles[t] = t
+        return lane_roles["OH"], lane_roles["MB"], lane_roles["OPP"]
+
+    def _lane_map_from_back(back: str) -> tuple[str, str, str]:
+        lane_roles = {"OH": "—", "MB": "—", "OPP": "—"}
+        if not back or back == "—":
+            return lane_roles["OH"], lane_roles["MB"], lane_roles["OPP"]
+        value = back.replace(" only", "")
+        tokens = [t.strip() for t in value.split("/")]
+        for t in tokens:
+            if t in lane_roles:
+                lane_roles[t] = t
+        return lane_roles["OH"], lane_roles["MB"], lane_roles["OPP"]
+
     def section(title: str, rows: list) -> None:
         nonlocal cur_y
         c.setFont("Helvetica-Bold", 7.5)
         c.drawCentredString(x + w / 2, cur_y, title)
         cur_y -= 9
 
-        col_x = [x + 11, x + 44, x + 100, x + 138]
-        c.setFont("Helvetica-Oblique", 6.2)
-        for label, cx in zip(["Card", "Front lanes", "Back row", "Max"], col_x):
+        col_x = [x + 8, x + 56, x + 70, x + 84, x + 100, x + 114, x + 128, x + 142, x + 156]
+        c.setFont("Helvetica-Oblique", 5.2)
+        for label, cx in zip(["Set", "L1F", "L2F", "L3F", "L1B", "L2B", "L3B", "Q", "Max"], col_x):
             c.drawString(cx, cur_y, label)
         cur_y -= 8
 
@@ -251,12 +292,20 @@ def draw_set_template_card(
         c.setStrokeColor(colors.black)
         cur_y -= 1
 
-        c.setFont("Helvetica", 6.8)
-        for card_range, front, back, mx in rows:
-            c.drawString(col_x[0], cur_y, card_range)
-            c.drawString(col_x[1], cur_y, front)
-            c.drawString(col_x[2], cur_y, back)
-            c.drawString(col_x[3], cur_y, mx)
+        c.setFont("Helvetica", 4.8)
+        for set_name, card_range, quick_to, front, back, mx in rows:
+            set_label = f"{set_name} ({card_range})"
+            l1f, l2f, l3f = _lane_map_from_front(front)
+            l1b, l2b, l3b = _lane_map_from_back(back)
+            c.drawString(col_x[0], cur_y, set_label)
+            c.drawString(col_x[1], cur_y, l1f)
+            c.drawString(col_x[2], cur_y, l2f)
+            c.drawString(col_x[3], cur_y, l3f)
+            c.drawString(col_x[4], cur_y, l1b)
+            c.drawString(col_x[5], cur_y, l2b)
+            c.drawString(col_x[6], cur_y, l3b)
+            c.drawString(col_x[7], cur_y, quick_to)
+            c.drawString(col_x[8], cur_y, mx)
             cur_y -= 9
 
     # ── Normal set table ──────────────────────────────────────────────────────
@@ -275,12 +324,88 @@ def draw_set_template_card(
     c.line(x + 8, cur_y, x + w - 8, cur_y)
     cur_y -= 12
 
+    # ── Team passive ability ──────────────────────────────────────────────────
+    passive = TEAM_PASSIVES.get(team_name)
+    if passive:
+        c.setFont("Helvetica-Bold", 7.5)
+        c.drawCentredString(x + w / 2, cur_y, "PASSIVE ABILITY")
+        cur_y -= 11
+        
+        # Wrap text if needed
+        style = ParagraphStyle(
+            "passive",
+            fontName="Helvetica",
+            fontSize=6.8,
+            leading=8.5,
+            alignment=TA_CENTER,
+            textColor=colors.black,
+        )
+        para = Paragraph(passive, style)
+        _, ph = para.wrap(w - 20, 30)
+        para.drawOn(c, x + 10, cur_y - ph)
+        cur_y -= ph + 6
+
     # ── Lane key footer ───────────────────────────────────────────────────────
     c.setFont("Helvetica", 6.2)
     c.drawCentredString(x + w / 2, cur_y, "Lane 1 = OH   ·   Lane 2 = MB   ·   Lane 3 = OPP")
     cur_y -= 8
     c.setFont("Helvetica-Oblique", 6)
     c.drawCentredString(x + w / 2, cur_y, "Broken play: setter dug ball this rally")
+
+
+def draw_deck_reference(
+    c: canvas.Canvas,
+    x: float, y: float, w: float, h: float,
+) -> None:
+    """Draw deck composition reference card."""
+    c.setLineWidth(1.8)
+    c.setStrokeColor(colors.black)
+    c.roundRect(x, y, w, h, radius=8, stroke=1, fill=0)
+
+    cur_y = y + h - 10
+
+    # Title
+    c.setFont("Helvetica-Bold", 13)
+    c.setFillColor(colors.black)
+    c.drawCentredString(x + w / 2, cur_y, "DECK MAKEUP")
+    cur_y -= 10
+
+    c.setFont("Helvetica", 7)
+    c.drawCentredString(x + w / 2, cur_y, "Player vs Dummy card distribution")
+    cur_y -= 10
+
+    c.setLineWidth(0.8)
+    c.line(x + 8, cur_y, x + w - 8, cur_y)
+    cur_y -= 13
+
+    # Player deck section
+    c.setFont("Helvetica-Bold", 8.2)
+    c.drawString(x + 10, cur_y, "Player Deck (standard):")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.0)
+    c.drawString(x + 12, cur_y, PLAYER_DECK_COUNTS)
+    cur_y -= 10
+    c.drawString(x + 12, cur_y, PLAYER_DECK_SPLIT)
+    cur_y -= 14
+
+    # Dummy deck section
+    c.setFont("Helvetica-Bold", 8.2)
+    c.drawString(x + 10, cur_y, "Dummy Deck (blind-play):")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.0)
+    c.drawString(x + 12, cur_y, DUMMY_DECK_COUNTS)
+    cur_y -= 10
+    c.drawString(x + 12, cur_y, DUMMY_DECK_SPLIT)
+    cur_y -= 14
+
+    # Usage note
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + 10, cur_y, "Why different decks?")
+    cur_y -= 10
+    c.setFont("Helvetica", 7.2)
+    c.drawString(x + 12, cur_y, "• Dummy teams do blind flips (no hand selection)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Extra high cards keep dummy teams competitive")
 
 
 def draw_quick_set_reference(
@@ -599,12 +724,13 @@ def make_pdf(
         cy = PAGE_H - MARGIN - (row + 1) * card_h - row * GUTTER
         draw_set_template_card(c, cx, cy, card_w, card_h, team_name)
 
-    # ── Reference cards (quick sets, attacks, blocking, chase) ────────────────
+    # ── Reference cards (rules + deck makeup) ─────────────────────────────────
     reference_cards = [
         ("Quick Set Rules", draw_quick_set_reference),
         ("Attack Types", draw_attack_types_reference),
         ("Blocking Rules", draw_blocking_reference),
         ("Chase Rules", draw_chase_reference),
+        ("Deck Makeup", draw_deck_reference),
     ]
     
     total_team_cards = len(team_order)
@@ -639,23 +765,31 @@ def main() -> None:
 
     team_map = load_team_assignments(args.data_dir)
 
-    # Group abilities by player
+    # First, load ALL players from roster files
     from collections import defaultdict
     players = defaultdict(lambda: {"role": None, "team": None, "abilities": []})
     
+    # Load all players from rosters
+    for stem, display in ROSTER_MAP.items():
+        if args.teams and display not in args.teams:
+            continue
+        path = os.path.join(args.data_dir, f"{stem}.csv")
+        if os.path.exists(path):
+            with open(path, newline="", encoding="utf-8") as fh:
+                for row in csv.DictReader(fh):
+                    player_name = row["player_name"]
+                    players[player_name]["role"] = row["role"]
+                    players[player_name]["team"] = display
+    
+    # Then overlay abilities from player_cards.csv
     with open(args.input, newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
-            team = team_map.get(row["player_name"], "Unknown")
-            if args.teams and team not in args.teams:
-                continue
-            
             player_name = row["player_name"]
-            players[player_name]["role"] = row["role"]
-            players[player_name]["team"] = team
-            players[player_name]["abilities"].append({
-                "ability_name": row["ability_name"],
-                "description": row["description"],
-            })
+            if player_name in players:
+                players[player_name]["abilities"].append({
+                    "ability_name": row["ability_name"],
+                    "description": row["description"],
+                })
     
     # Convert to list of cards (one per player)
     cards = []

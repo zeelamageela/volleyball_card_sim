@@ -535,6 +535,20 @@ class Rally:
                 elif is_back_row_attack and attacker.ability_engine.back_row_pierce(attacker_role, attack_card.value):
                     # Phase 4: Back-row attacks can pierce blocks
                     effective_block = 0
+                # Passive ability: Back Court Threat (Medium team)
+                elif is_back_row_attack and attacker.passive_ability == "Back Court Threat":
+                    # Back-row attacks ignore first blocker (use only blockers beyond the first)
+                    block_cards_in_lane = block_cards.get(attack_lane, [])
+                    if len(block_cards_in_lane) > 1:
+                        # Remove the minimum blocker, keep the rest
+                        sorted_blocks = sorted(c.value for c in block_cards_in_lane)
+                        effective_block = sum(sorted_blocks[1:])  # Skip first (minimum) blocker
+                        self._narrate(f"  Passive: Back Court Threat ignores first blocker ({sorted_blocks[0]}), effective block = {effective_block}")
+                    else:
+                        # Only one blocker or no blockers: ignore it
+                        effective_block = 0
+                        if block_cards_in_lane:
+                            self._narrate(f"  Passive: Back Court Threat ignores single blocker ({block_cards_in_lane[0].value})")
                 elif attacker.ability_engine.min_blocker_only(attacker_role, attack_card.value):
                     # Phase 4: Only the MINIMUM single blocker card counts
                     # Get all block cards in this lane
@@ -898,7 +912,7 @@ class Rally:
                         if def_strat.cover_draws_from_deck():
                             # Blind deck flip — strategy draws top card, no hand selection
                             if defender.deck.draw_pile_size > 0:
-                                cover_card = defender.deck.draw()
+                                cover_card = defender.draw_for_action()
                                 defender.deck.discard(cover_card)
                                 dig_card = cover_card
                                 cover_attempted = True
@@ -949,12 +963,16 @@ class Rally:
                                     attacker.hand.remove(highest)
                                     attacker.deck.discard(highest)
                                     if attacker.deck.draw_pile_size > 0:
-                                        new_card = attacker.deck.draw()
+                                        new_card = attacker.draw_for_action()
                                         attacker.hand.append(new_card)
                         # Broken play: setter dig unless cover was attempted and card cleared threshold
                         if defender_role == PlayerRole.SETTER:
                             if cover_attempted and dig_card.value >= cover_threshold:
                                 self._narrate(f"  Cover:   adjacent player reached (card {dig_card.value}) — no broken play")
+                                self._broken_play = False
+                            # Passive ability: Safe Setter (Easy team)
+                            elif defender.passive_ability == "Safe Setter":
+                                self._narrate(f"  Passive: Safe Setter prevents broken play")
                                 self._broken_play = False
                             else:
                                 self._broken_play = True
@@ -1130,7 +1148,7 @@ class Rally:
             card, target = self._srv_strat.choose_serve(self._srv.hand, eligible)
             self._srv.play_card(card)
         else:
-            card = self._srv.deck.draw()
+            card = self._srv.draw_for_action()
             self._srv.deck.discard(card)
             target = self._rng.choice(eligible)
         self._srv.refill_hand()
@@ -1141,7 +1159,7 @@ class Rally:
             card = self._rcv_strat.choose_receive_card(self._rcv.hand, serve_value)
             self._rcv.play_card(card)
         else:
-            card = self._rcv.deck.draw()
+            card = self._rcv.draw_for_action()
             self._rcv.deck.discard(card)
         # No refill here: hand replenishes only when the ball crosses the net.
         return card
@@ -1153,7 +1171,7 @@ class Rally:
             card = strat.choose_set_card(team.hand, broken_play=self._broken_play)
             team.play_card(card)
         else:
-            card = team.deck.draw()
+            card = team.draw_for_action()
             team.deck.discard(card)
         # No refill here: hand replenishes only when the ball crosses the net.
         
@@ -1202,7 +1220,7 @@ class Rally:
                     swap_out = strat.choose_exchange_card(team.hand, deck_top)
                     if swap_out is not None and swap_out in team.hand:
                         team.play_card(swap_out)          # removes from hand, discards
-                        new_card = team.deck.draw()
+                        new_card = team.draw_for_action()
                         team.hand.append(new_card)
             placements = strat.choose_hit_cards(team.hand, template)
             cards_to_commit = [card for _, card, _ in placements]
@@ -1239,7 +1257,7 @@ class Rally:
                     candidates.append((lane, "back"))
 
             for lane, position in candidates[: template.max_attackers - placed]:
-                blind_card = team.deck.draw()
+                blind_card = team.draw_for_action()
                 attack_cards.setdefault(lane, []).append(
                     AttackCard(card=blind_card, position=position, blind=True)
                 )
@@ -1290,7 +1308,7 @@ class Rally:
                 # Handle quick lanes first (blind draws)
                 for lane in quick_lanes:
                     if team.deck.draw_pile_size > 0:
-                        card = team.deck.draw()
+                        card = team.draw_for_action()
                         placement[lane] = [card]  # Only 1 card allowed
                         self._narrate(f"  Block:   Quick set lane {lane} → blind draw card {card.value}")
                     # If no deck, skip this lane (no block)
@@ -1312,7 +1330,7 @@ class Rally:
             placement = {}
             for lane in sorted(attack_lanes):
                 # Quick lanes still get only 1 card
-                card = team.deck.draw()
+                card = team.draw_for_action()
                 placement[lane] = [card]
             all_block_cards = [c for cards in placement.values() for c in cards]
 
@@ -1340,7 +1358,7 @@ class Rally:
                         drawn_cards = []
                         for _ in range(draw_count):
                             if team.deck.total_size > 0:
-                                card = team.deck.draw()
+                                card = team.draw_for_action()
                                 drawn_cards.append(card)
                         
                         # Calculate value to add based on drawn cards
@@ -1383,7 +1401,7 @@ class Rally:
             card = strat.choose_dig_card(team.hand, target_value, dig_type)
             team.play_card(card)
         else:
-            card = team.deck.draw()
+            card = team.draw_for_action()
             team.deck.discard(card)
         # No refill here: hand replenishes only when the ball crosses the net.
         return card
