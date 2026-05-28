@@ -445,6 +445,9 @@ class Rally:
 
                 attack_lane = atk_strat.choose_attack_lane(simplified_attacks, block_layout)
 
+            # Resolve role from chosen lane before any role-gated ability checks.
+            attacker_role = LANE_TO_ROLE.get(attack_lane)
+
             # Phase 4: SLIDE_LANES ability - can shift to adjacent lane with lower block
             # Check if attacker has slide_lanes ability and an adjacent lane is available
             if not is_armed and attacker.ability_engine and attacker_role:
@@ -494,7 +497,6 @@ class Rally:
             block_value = block_layout.get(attack_lane, 0)
 
             # Apply attacker abilities (attack bonus, pierce block, quick-set MB bonus)
-            attacker_role = LANE_TO_ROLE.get(attack_lane)
             mb_qs_bonus   = (
                 attacker.ability_engine.consume_mb_attack_bonus()
                 if attacker.ability_engine else 0
@@ -1185,8 +1187,10 @@ class Rally:
         
         effective_value = min(10, max(1, effective_value))
         
-        # Select template based on broken play status
-        template = BROKEN_PLAY_TEMPLATES[effective_value] if self._broken_play else SETTER_TEMPLATES[effective_value]
+        # Select template based on broken play status.
+        # Team-specific template maps are injected from CSV runtime config.
+        template_map = team.broken_play_templates if self._broken_play else team.setter_templates
+        template = template_map[effective_value]
         
         # Reset broken play flag after use
         self._broken_play = False

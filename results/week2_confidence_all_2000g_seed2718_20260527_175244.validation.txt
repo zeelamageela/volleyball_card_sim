@@ -1,0 +1,36 @@
+COMMAND:
+C:\Users\zackl\Documents\volleyball_card_sim\.venv\Scripts\python.exe validate_balance_targets.py --results results\week2_confidence_all_2000g_seed2718_20260527_175244.csv --targets data\balance_targets.csv
+
+STDOUT:
+Balance Target Validation
+================================================================================
+FAIL | win_rate_a         | pvp  | Blitz vs Grind         | observed=36.250     target=[45.000, 55.000]
+FAIL | win_rate_a         | pvp  | Grind vs Blitz         | observed=64.350     target=[45.000, 55.000]
+PASS | win_rate_a         | pvd  | Blitz vs Easy          | observed=75.750     target=[70.000, 80.000]
+PASS | win_rate_a         | pvd  | Blitz vs Medium        | observed=61.750     target=[52.000, 62.000]
+PASS | win_rate_a         | pvd  | Blitz vs Hard          | observed=26.000     target=[25.000, 35.000]
+PASS | win_rate_a         | pvd  | Grind vs Easy          | observed=78.400     target=[70.000, 80.000]
+PASS | win_rate_a         | pvd  | Grind vs Medium        | observed=55.300     target=[52.000, 62.000]
+PASS | win_rate_a         | pvd  | Grind vs Hard          | observed=25.150     target=[25.000, 35.000]
+PASS | avg_exchanges      | pvp  | Blitz vs Grind         | observed=2.483      target=[1.800, 3.500]
+FAIL | avg_exchanges      | pvd  | Blitz vs Easy          | observed=1.746      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Blitz vs Medium        | observed=3.102      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Blitz vs Hard          | observed=2.241      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Grind vs Blitz         | observed=2.478      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Grind vs Easy          | observed=1.831      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Grind vs Medium        | observed=3.269      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Grind vs Hard          | observed=2.232      target=[1.800, 3.500]
+PASS | top_endings_share  | pvp  | Blitz vs Grind         | observed=42.154     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Blitz vs Easy          | observed=22.213     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Blitz vs Medium        | observed=41.587     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Blitz vs Hard          | observed=20.040     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Grind vs Blitz         | observed=41.916     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Grind vs Easy          | observed=24.054     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Grind vs Medium        | observed=41.116     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Grind vs Hard          | observed=19.470     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+--------------------------------------------------------------------------------
+Summary: PASS=21 FAIL=3 SKIP=0
+
+STDERR:
+
+EXIT_CODE: 1

@@ -1,0 +1,11 @@
+   Blitz vs Grind    ->  35.75% /  64.25%
+   Blitz vs Easy     ->  73.85% /  26.15%
+   Blitz vs Medium   ->  60.60% /  39.40%
+   Blitz vs Hard     ->  28.05% /  71.95%
+   Grind vs Blitz    ->  67.15% /  32.85%
+   Grind vs Easy     ->  77.60% /  22.40%
+   Grind vs Medium   ->  56.75% /  43.25%
+   Grind vs Hard     ->  28.30% /  71.70%
+
+Saved 8 matchup rows to results\week2_confidence_all_2000g_seed314_2026-05-27.csv
+

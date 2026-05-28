@@ -4,8 +4,8 @@ report.py  —  Player ability analysis and team balance report.
 Usage:
     python report.py
     python report.py --player-cards data/player_cards.csv \
-                     --roster-a data/team_a.csv \
-                     --roster-b data/team_b.csv \
+                     --roster-a data/team_blitz.csv \
+                     --roster-b data/team_grind.csv \
                      --sim-games 2000 --seed 42
 """
 
@@ -16,11 +16,13 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from src.runtime_config import resolve_team_runtime_config
+
 # ── Default paths ─────────────────────────────────────────────────────────────
 
 DEFAULT_CARDS  = Path("data/player_cards.csv")
-DEFAULT_A      = Path("data/team_a.csv")
-DEFAULT_B      = Path("data/team_b.csv")
+DEFAULT_A      = Path("data/team_blitz.csv")
+DEFAULT_B      = Path("data/team_grind.csv")
 
 # ── Impact weights ─────────────────────────────────────────────────────────────
 #
@@ -312,8 +314,10 @@ def run_sim(cards_path: Path, roster_a_path: Path, roster_b_path: Path,
         import src.simulation as sim_mod
         import src.strategies as strat_mod
         player_cards = ab_mod.load_player_cards(cards_path)
-        engine_a = ab_mod.build_ability_engine(roster_a_path, player_cards)
-        engine_b = ab_mod.build_ability_engine(roster_b_path, player_cards)
+        cfg_a = resolve_team_runtime_config(roster_a_path, None)
+        cfg_b = resolve_team_runtime_config(roster_b_path, None)
+        engine_a = ab_mod.build_ability_engine(cfg_a.roster_path, player_cards)
+        engine_b = ab_mod.build_ability_engine(cfg_b.roster_path, player_cards)
         strat_rng = random.Random(seed)
         strategy_a = strat_mod.RandomStrategy(random.Random(seed ^ 0xAAAA_AAAA))
         strategy_b = strat_mod.RandomStrategy(random.Random(seed ^ 0x5555_5555))
@@ -321,10 +325,22 @@ def run_sim(cards_path: Path, roster_a_path: Path, roster_b_path: Path,
             strategy_a, strategy_b,
             n_games=n_games, seed=seed,
             engine_a=engine_a, engine_b=engine_b,
+            name_a=cfg_a.team_name,
+            name_b=cfg_b.team_name,
+            use_hand_a=cfg_a.use_hand,
+            use_hand_b=cfg_b.use_hand,
+            deck_type_a=cfg_a.deck_type,
+            deck_type_b=cfg_b.deck_type,
+            passive_ability_a=cfg_a.passive_ability,
+            passive_ability_b=cfg_b.passive_ability,
+            setter_templates_a=cfg_a.setter_templates,
+            setter_templates_b=cfg_b.setter_templates,
+            broken_play_templates_a=cfg_a.broken_play_templates,
+            broken_play_templates_b=cfg_b.broken_play_templates,
         )
         stats = sim.run()
-        wins_a = stats.wins.get("Team A", 0)
-        wins_b = stats.wins.get("Team B", 0)
+        wins_a = stats.wins.get(cfg_a.team_name, 0)
+        wins_b = stats.wins.get(cfg_b.team_name, 0)
         return round(wins_a / n_games * 100, 1), round(wins_b / n_games * 100, 1)
     except Exception as exc:
         print(f"\n  [sim error: {exc}]")

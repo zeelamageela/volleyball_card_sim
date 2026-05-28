@@ -1,0 +1,3 @@
+seed,matrix_csv,validation_txt,validator_exit
+42,results\week3_waiver_confidence_pvd_2000g_seed42_2026-05-28.csv,results\week3_waiver_confidence_pvd_2000g_seed42_2026-05-28.validation.txt,1
+314,results\week3_waiver_confidence_pvd_2000g_seed314_2026-05-28.csv,results\week3_waiver_confidence_pvd_2000g_seed314_2026-05-28.validation.txt,1

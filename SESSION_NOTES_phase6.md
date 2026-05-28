@@ -1,3 +1,10 @@
+# Phase Session Notes
+
+Reference warning (May 27, 2026):
+- This file is historical and may include superseded descriptions.
+- Engine behavior in `src/` is the runtime source of truth.
+- CSV docs in `data/set_templates.csv`, `data/teams.csv`, and `data/team_passives.csv` are the intended editable source-of-truth references.
+
 # Phase 6 Session Notes
 
 **Date:** May 26, 2026

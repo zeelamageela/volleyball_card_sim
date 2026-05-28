@@ -3,9 +3,9 @@ Interactive volleyball card game — play a game from the terminal.
 
 Usage examples:
   python play.py
-  python play.py --your-team data/team_a.csv --ai-team data/team_dummy_hard.csv
-  python play.py --your-team data/team_a.csv --ai-team data/team_b.csv --verbose
-  python play.py --your-team data/team_phase5.csv --ai-team data/team_b.csv --side b
+    python play.py --your-team data/team_blitz.csv --ai-team data/team_dummy_hard.csv
+    python play.py --your-team data/team_blitz.csv --ai-team data/team_grind.csv --verbose
+    python play.py --your-team data/team_blitz.csv --ai-team data/team_grind.csv --side b
 """
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from src.players import Team
 from src.game import Rally, POINTS_TO_WIN
 from src.strategies import SmartStrategy
 from src.interactive import InteractiveStrategy, show_roster
+from src.runtime_config import resolve_team_runtime_config
 
 CARDS_CSV = Path("data/player_cards.csv")
 
@@ -37,12 +38,12 @@ def parse_args() -> argparse.Namespace:
         metavar="CSV", help=f"Player cards CSV (default: {CARDS_CSV})",
     )
     p.add_argument(
-        "--your-team", type=Path, default=Path("data/team_a.csv"),
-        metavar="CSV", help="Your roster CSV (default: data/team_a.csv)",
+        "--your-team", type=Path, default=Path("data/team_blitz.csv"),
+        metavar="CSV", help="Your roster CSV (default: data/team_blitz.csv)",
     )
     p.add_argument(
-        "--ai-team", type=Path, default=Path("data/team_b.csv"),
-        metavar="CSV", help="AI roster CSV (default: data/team_b.csv)",
+        "--ai-team", type=Path, default=Path("data/team_grind.csv"),
+        metavar="CSV", help="AI roster CSV (default: data/team_grind.csv)",
     )
     p.add_argument(
         "--side", choices=["a", "b"], default="a",
@@ -55,6 +56,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--seed", type=int, default=None,
         help="RNG seed for reproducibility (default: random)",
+    )
+    p.add_argument(
+        "--teams-csv", type=Path, default=Path("data/teams.csv"),
+        help="Team configuration CSV",
+    )
+    p.add_argument(
+        "--team-passives-csv", type=Path, default=Path("data/team_passives.csv"),
+        help="Team passives CSV",
+    )
+    p.add_argument(
+        "--set-templates-csv", type=Path, default=Path("data/set_templates.csv"),
+        help="Set template CSV",
     )
     return p.parse_args()
 
@@ -80,10 +93,26 @@ def main() -> None:
         seed = random.randint(0, 2**31 - 1)
     master_rng = random.Random(seed)
 
+    # ── Team runtime config (CSV-driven) ─────────────────────────────────────
+    cfg_you = resolve_team_runtime_config(
+        roster_path=args.your_team,
+        team_name=None,
+        teams_csv=args.teams_csv,
+        passives_csv=args.team_passives_csv,
+        set_templates_csv=args.set_templates_csv,
+    )
+    cfg_ai = resolve_team_runtime_config(
+        roster_path=args.ai_team,
+        team_name=None,
+        teams_csv=args.teams_csv,
+        passives_csv=args.team_passives_csv,
+        set_templates_csv=args.set_templates_csv,
+    )
+
     # ── Ability engines ───────────────────────────────────────────────────────
     player_cards = load_player_cards(args.player_cards)
-    engine_you = build_ability_engine(args.your_team, player_cards)
-    engine_ai  = build_ability_engine(args.ai_team,   player_cards)
+    engine_you = build_ability_engine(cfg_you.roster_path, player_cards)
+    engine_ai  = build_ability_engine(cfg_ai.roster_path, player_cards)
 
     if args.verbose:
         if engine_you:
@@ -99,8 +128,8 @@ def main() -> None:
     )
     ai_strat    = SmartStrategy(ai_rng)
 
-    your_label = _label(args.your_team)
-    ai_label   = _label(args.ai_team)
+    your_label = cfg_you.team_name or _label(args.your_team)
+    ai_label   = cfg_ai.team_name or _label(args.ai_team)
 
     # ── Banner ────────────────────────────────────────────────────────────────
     print()
@@ -126,8 +155,24 @@ def main() -> None:
     team_rng_you = random.Random(master_rng.randint(0, 2**31 - 1))
     team_rng_ai  = random.Random(master_rng.randint(0, 2**31 - 1))
 
-    team_you = Team(your_label, team_rng_you)
-    team_ai  = Team(ai_label,   team_rng_ai)
+    team_you = Team(
+        your_label,
+        team_rng_you,
+        use_hand=cfg_you.use_hand,
+        deck_type=cfg_you.deck_type,
+        passive_ability=cfg_you.passive_ability,
+        setter_templates=cfg_you.setter_templates,
+        broken_play_templates=cfg_you.broken_play_templates,
+    )
+    team_ai  = Team(
+        ai_label,
+        team_rng_ai,
+        use_hand=cfg_ai.use_hand,
+        deck_type=cfg_ai.deck_type,
+        passive_ability=cfg_ai.passive_ability,
+        setter_templates=cfg_ai.setter_templates,
+        broken_play_templates=cfg_ai.broken_play_templates,
+    )
 
     if engine_you:
         engine_you.reset()

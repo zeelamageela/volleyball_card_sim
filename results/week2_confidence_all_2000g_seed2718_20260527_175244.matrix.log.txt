@@ -1,0 +1,18 @@
+COMMAND:
+C:\Users\zackl\Documents\volleyball_card_sim\.venv\Scripts\python.exe balance_matrix.py --mode all --games 2000 --seed 2718 --output results\week2_confidence_all_2000g_seed2718_20260527_175244.csv
+
+STDOUT:
+   Blitz vs Grind    ->  36.25% /  63.75%
+   Blitz vs Easy     ->  75.75% /  24.25%
+   Blitz vs Medium   ->  61.75% /  38.25%
+   Blitz vs Hard     ->  26.00% /  74.00%
+   Grind vs Blitz    ->  64.35% /  35.65%
+   Grind vs Easy     ->  78.40% /  21.60%
+   Grind vs Medium   ->  55.30% /  44.70%
+   Grind vs Hard     ->  25.15% /  74.85%
+
+Saved 8 matchup rows to results\week2_confidence_all_2000g_seed2718_20260527_175244.csv
+
+STDERR:
+
+EXIT_CODE: 0

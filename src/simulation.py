@@ -3,9 +3,9 @@ from __future__ import annotations
 import random
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, Type
+from typing import Dict, List, Optional, Tuple
 
-from .players import Team
+from .players import Team, SetTemplate
 from .game import Game
 from .game_state import GameResult
 from .strategies import BaseStrategy, RandomStrategy
@@ -132,6 +132,14 @@ class Simulation:
         name_b: str = "Team B",
         use_hand_a: bool = True,
         use_hand_b: bool = True,
+        deck_type_a: Optional[str] = None,
+        deck_type_b: Optional[str] = None,
+        passive_ability_a: Optional[str] = None,
+        passive_ability_b: Optional[str] = None,
+        setter_templates_a: Optional[Dict[int, SetTemplate]] = None,
+        setter_templates_b: Optional[Dict[int, SetTemplate]] = None,
+        broken_play_templates_a: Optional[Dict[int, SetTemplate]] = None,
+        broken_play_templates_b: Optional[Dict[int, SetTemplate]] = None,
     ) -> None:
         self._strat_a   = strategy_a
         self._strat_b   = strategy_b
@@ -143,6 +151,14 @@ class Simulation:
         self._name_b    = name_b
         self._use_hand_a = use_hand_a
         self._use_hand_b = use_hand_b
+        self._deck_type_a = deck_type_a
+        self._deck_type_b = deck_type_b
+        self._passive_ability_a = passive_ability_a
+        self._passive_ability_b = passive_ability_b
+        self._setter_templates_a = setter_templates_a
+        self._setter_templates_b = setter_templates_b
+        self._broken_play_templates_a = broken_play_templates_a
+        self._broken_play_templates_b = broken_play_templates_b
 
     def _child_rng(self) -> random.Random:
         return random.Random(self._master_rng.randint(0, 2**31 - 1))
@@ -161,10 +177,26 @@ class Simulation:
 
         for _ in range(self._n_games):
             # Use "dummy" deck for teams without hands (blind deck flips)
-            deck_type_a = "dummy" if not self._use_hand_a else "standard"
-            deck_type_b = "dummy" if not self._use_hand_b else "standard"
-            team_a = Team(self._name_a, self._child_rng(), use_hand=self._use_hand_a, deck_type=deck_type_a)
-            team_b = Team(self._name_b, self._child_rng(), use_hand=self._use_hand_b, deck_type=deck_type_b)
+            deck_type_a = self._deck_type_a if self._deck_type_a else ("dummy" if not self._use_hand_a else "standard")
+            deck_type_b = self._deck_type_b if self._deck_type_b else ("dummy" if not self._use_hand_b else "standard")
+            team_a = Team(
+                self._name_a,
+                self._child_rng(),
+                use_hand=self._use_hand_a,
+                deck_type=deck_type_a,
+                passive_ability=self._passive_ability_a,
+                setter_templates=self._setter_templates_a,
+                broken_play_templates=self._broken_play_templates_a,
+            )
+            team_b = Team(
+                self._name_b,
+                self._child_rng(),
+                use_hand=self._use_hand_b,
+                deck_type=deck_type_b,
+                passive_ability=self._passive_ability_b,
+                setter_templates=self._setter_templates_b,
+                broken_play_templates=self._broken_play_templates_b,
+            )
             # Attach ability engines (reset per-game state first)
             if self._engine_a:
                 self._engine_a.reset()

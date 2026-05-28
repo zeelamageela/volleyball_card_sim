@@ -1,0 +1,7 @@
+team_a,team_b,mode,games,seed,strategy_a,strategy_b,deck_type_a,deck_type_b,passive_a,passive_b,wins_a,wins_b,win_rate_a,win_rate_b,avg_rallies,avg_exchanges,top_endings
+Blitz,Easy,pvd,2000,314,smart,dummy,standard,dummy,,Safe Setter,1443,557,72.15,27.85,25.677,1.758,Stuffed:11424 | Tip not dug:8272 | Deflect not dug:4456
+Blitz,Medium,pvd,2000,315,smart,dummy,standard,dummy,,Back Court Threat,1222,778,61.1,38.9,25.082,3.113,Tip not dug:20817 | Stuffed:9752 | Deflect not dug:6860
+Blitz,Hard,pvd,2000,316,smart,dummy,standard,dummy,,Elite Draw,555,1445,27.75,72.25,25.572,2.232,Deflect not dug:10266 | Tip not dug:10171 | Stuffed:8926
+Grind,Easy,pvd,2000,317,smart,dummy,standard,dummy,Deep Bench,Safe Setter,1560,440,78.0,22.0,25.258,1.851,Stuffed:12396 | Tip not dug:7010 | Deflect not dug:3953
+Grind,Medium,pvd,2000,318,smart,dummy,standard,dummy,Deep Bench,Back Court Threat,1095,905,54.75,45.25,25.267,3.272,Tip not dug:20908 | Stuffed:11764 | Deflect not dug:6192
+Grind,Hard,pvd,2000,319,smart,dummy,standard,dummy,Deep Bench,Elite Draw,577,1423,28.85,71.15,25.596,2.238,Stuffed:10035 | Deflect not dug:9298 | Tip not dug:8572

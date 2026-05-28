@@ -1,3 +1,10 @@
+# Session Notes
+
+Reference warning (May 27, 2026):
+- Session notes are historical logs and may contain superseded rules.
+- Engine behavior in `src/` is authoritative at runtime.
+- CSV docs in `data/set_templates.csv`, `data/teams.csv`, and `data/team_passives.csv` are the intended editable source-of-truth references.
+
 ## Session Handoff - May 27, 2026
 
 Status: Completed core implementation and print pipeline updates. Next session can start from balance tuning and CSV runtime wiring.

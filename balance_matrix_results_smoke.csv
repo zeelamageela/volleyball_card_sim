@@ -1,0 +1,2 @@
+team_a,team_b,mode,games,seed,strategy_a,strategy_b,deck_type_a,deck_type_b,passive_a,passive_b,wins_a,wins_b,win_rate_a,win_rate_b,avg_rallies,avg_exchanges,top_endings
+Blitz,Easy,pvd,20,42,smart,dummy,standard,dummy,,Safe Setter,20,0,100.0,0.0,22.05,2.138,Stuffed:148 | Tip not dug:102 | Deflect not dug:56

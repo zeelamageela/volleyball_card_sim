@@ -8,9 +8,12 @@ Usage:
 """
 
 import csv
+import hashlib
+import json
 import os
 import argparse
-from typing import Optional, List
+from collections import defaultdict
+from typing import Dict, Optional, List, Tuple
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -37,87 +40,6 @@ TEAM_COLORS = {
     "Medium":  colors.HexColor("#CCCCCC"),  # light grey
     "Hard":    colors.HexColor("#999999"),  # dark grey
     "Unknown": colors.HexColor("#E8E8E8"),  # neutral
-}
-
-# ── Team-specific set templates ──────────────────────────────────────────────
-TEAM_SET_TEMPLATES = {
-    "Blitz": {
-        "normal": [
-            ("Flash", "1-3",  "OH/MB", "OH · MB",        "—",         "2"),
-            ("Pulse", "4-5",  "—",     "OH · MB",        "OH/MB/OPP", "3"),
-            ("Surge", "6-7",  "—",     "MB · OPP",       "OH/MB/OPP", "3"),
-            ("Pin",   "8-9",  "—",     "OH · OPP",       "OH/MB/OPP", "4"),
-            ("Blaze", "10",   "—",     "OH · OPP",       "OH/MB/OPP", "4"),
-        ],
-        "broken": [
-            ("Scramble A", "1-3",  "OH", "OH",       "—",       "1"),
-            ("Scramble B", "4-7",  "—",  "OH · OPP", "MB only", "2"),
-            ("Scramble C", "8-10", "—",  "OH · OPP", "MB only", "2"),
-        ],
-    },
-    "Grind": {
-        "normal": [
-            ("Wall",    "1-3",  "OH/MB/OPP", "OH · MB · OPP",  "—",         "3"),
-            ("Anchor",  "4-5",  "—",          "OH · MB",        "OH/MB/OPP", "3"),
-            ("Clamp",   "6-7",  "—",          "MB · OPP",       "OH/MB/OPP", "3"),
-            ("Grind",   "8-9",  "—",          "OH · OPP",       "OH/MB/OPP", "4"),
-            ("Siege",   "10",   "—",          "OH · MB · OPP",  "OH/MB/OPP", "4"),
-        ],
-        "broken": [
-            ("Reset A", "1-3",  "OH/MB", "OH · MB",   "MB only", "2"),
-            ("Reset B", "4-7",  "—",     "OH · OPP",  "MB only", "2"),
-            ("Reset C", "8-10", "—",     "MB · OPP",  "MB only", "2"),
-        ],
-    },
-    "Easy": {
-        "normal": [
-            ("Simple A", "1-3",  "OH/MB", "OH · MB",   "—",      "2"),
-            ("Simple B", "4-5",  "—",     "OH · MB",   "—",      "2"),
-            ("Simple C", "6-7",  "—",     "MB · OPP",  "OPP",    "2"),
-            ("Simple D", "8-9",  "—",     "OH · OPP",  "OPP",    "3"),
-            ("Simple E", "10",   "—",     "OH · OPP",  "OH/OPP", "3"),
-        ],
-        "broken": [
-            ("Panic A", "1-3",  "OH", "OH",       "—",       "1"),
-            ("Panic B", "4-7",  "—",  "OH",       "—",       "1"),
-            ("Panic C", "8-10", "—",  "OH · OPP", "—",       "2"),
-        ],
-    },
-    "Medium": {
-        "normal": [
-            ("Tempo A", "1-4",  "OH/MB/OPP", "OH · MB · OPP",  "—",         "3"),
-            ("Tempo B", "5-6",  "—",          "OH · MB",        "OH/MB/OPP", "3"),
-            ("Tempo C", "7-8",  "—",          "MB · OPP",       "OH/MB/OPP", "3"),
-            ("Tempo D", "9-10", "—",          "OH · OPP",       "OH/MB/OPP", "4"),
-        ],
-        "broken": [
-            ("Recovery A", "1-4",  "OH/MB", "OH · MB",   "MB only", "2"),
-            ("Recovery B", "5-7",  "—",     "OH · OPP",  "MB only", "2"),
-            ("Recovery C", "8-10", "—",     "MB · OPP",  "MB only", "2"),
-        ],
-    },
-    "Hard": {
-        "normal": [
-            ("Elite A", "1-4",  "OH/MB/OPP", "OH · MB · OPP",  "MB only",   "3"),
-            ("Elite B", "5-6",  "—",          "OH · MB · OPP",  "OH/MB/OPP", "4"),
-            ("Elite C", "7-8",  "—",          "MB · OPP",       "OH/MB/OPP", "4"),
-            ("Elite D", "9-10", "—",          "OH · OPP",       "OH/MB/OPP", "5"),
-        ],
-        "broken": [
-            ("Pressure A", "1-4",  "OH/MB", "OH · MB",   "MB only",   "2"),
-            ("Pressure B", "5-7",  "—",     "OH · OPP",  "MB only",   "2"),
-            ("Pressure C", "8-10", "—",     "MB · OPP",  "OH/MB/OPP", "3"),
-        ],
-    },
-}
-
-# ── Team passive abilities ────────────────────────────────────────────────────
-TEAM_PASSIVES = {
-    "Blitz": None,  # TBD
-    "Grind": "Deep Bench: Start with 6 cards instead of 5.",
-    "Easy": "Safe Setter: Digs by the setter never cause broken play.",
-    "Medium": "Back Court Threat: Back-row attacks ignore the first blocker.",
-    "Hard": "Elite Draw: Draw 2 cards for any action, keep the higher value.",
 }
 
 # ── Deck reference (for dedicated reference card) ───────────────────────────
@@ -147,6 +69,193 @@ def load_team_assignments(data_dir: str):
                 for row in csv.DictReader(fh):
                     assignments[row["player_name"]] = display
     return assignments
+
+
+def _as_bool(value: str, default: bool = True) -> bool:
+    v = (value or "").strip().lower()
+    if v in {"true", "1", "yes", "y"}:
+        return True
+    if v in {"false", "0", "no", "n"}:
+        return False
+    return default
+
+
+def _is_blank_lane(cell: str) -> bool:
+    token = (cell or "").strip().lower()
+    return token in {"", "-", "—", "none", "n/a"}
+
+
+def _role_tokens(cell: str) -> List[str]:
+    raw = (cell or "").replace("·", "/")
+    tokens = [t.strip().upper() for t in raw.split("/") if t.strip()]
+    out: List[str] = []
+    for token in tokens:
+        if token in {"OH", "MB", "OPP"} and token not in out:
+            out.append(token)
+    return out
+
+
+def _card_range_key(card_range: str) -> int:
+    spec = (card_range or "").strip()
+    if "-" in spec:
+        left = spec.split("-", 1)[0].strip()
+        return int(left or 999)
+    return int(spec or 999)
+
+
+def _clean_passive_name(name: str) -> Optional[str]:
+    token = (name or "").strip()
+    if not token:
+        return None
+    if token.lower() in {"tbd", "none", "null", "-", "—"}:
+        return None
+    return token
+
+
+def load_template_bundles(set_templates_csv: str) -> Dict[str, Dict[str, List[Tuple[str, str, str, str, str, str]]]]:
+    bundles: Dict[str, Dict[str, List[Tuple[str, str, str, str, str, str]]]] = {}
+    with open(set_templates_csv, newline="", encoding="utf-8-sig") as fh:
+        for row in csv.DictReader(fh):
+            template_name = (row.get("template_name") or "").strip()
+            set_type = (row.get("set_type") or "").strip().lower()
+            if not template_name or set_type not in {"normal", "broken"}:
+                continue
+
+            role_order = ["OH", "MB", "OPP"]
+            front_roles: List[str] = []
+            back_roles: List[str] = []
+
+            for lane in (1, 2, 3):
+                front_cell = row.get(f"lane{lane}_front", "")
+                if not _is_blank_lane(front_cell):
+                    for role in _role_tokens(front_cell):
+                        if role not in front_roles:
+                            front_roles.append(role)
+
+                back_cell = row.get(f"lane{lane}_back", "")
+                if not _is_blank_lane(back_cell):
+                    for role in _role_tokens(back_cell):
+                        if role not in back_roles:
+                            back_roles.append(role)
+
+            front = " · ".join([r for r in role_order if r in front_roles]) or "—"
+            back = "/".join([r for r in role_order if r in back_roles]) or "—"
+
+            set_name = (row.get("set_name") or template_name).strip()
+            card_range = (row.get("card_range") or "").strip()
+            quick_to = (row.get("quickset_to") or "").strip() or "—"
+            max_hitters = (row.get("max_hitters") or "1").strip()
+
+            entry = (set_name, card_range, quick_to, front, back, max_hitters)
+            bundle = bundles.setdefault(template_name, {"normal": [], "broken": []})
+            bundle[set_type].append(entry)
+
+    for bundle in bundles.values():
+        bundle["normal"].sort(key=lambda item: _card_range_key(item[1]))
+        bundle["broken"].sort(key=lambda item: _card_range_key(item[1]))
+
+    return bundles
+
+
+def load_team_passive_texts(passives_csv: str) -> Dict[str, str]:
+    passive_by_team: Dict[str, str] = {}
+    if not os.path.exists(passives_csv):
+        return passive_by_team
+
+    with open(passives_csv, newline="", encoding="utf-8-sig") as fh:
+        for row in csv.DictReader(fh):
+            team = (row.get("team_name") or "").strip()
+            if not team:
+                continue
+            if not _as_bool(row.get("is_active", "false"), default=False):
+                continue
+            passive_name = _clean_passive_name(row.get("passive_name", ""))
+            if not passive_name:
+                continue
+            desc = (row.get("passive_description") or "").strip()
+            passive_by_team[team] = f"{passive_name}: {desc}" if desc else passive_name
+
+    return passive_by_team
+
+
+def load_team_card_data(data_dir: str) -> Dict[str, dict]:
+    teams_csv = os.path.join(data_dir, "teams.csv")
+    set_templates_csv = os.path.join(data_dir, "set_templates.csv")
+    passives_csv = os.path.join(data_dir, "team_passives.csv")
+
+    templates_by_name = load_template_bundles(set_templates_csv)
+    passives_by_team = load_team_passive_texts(passives_csv)
+
+    team_cards: Dict[str, dict] = {}
+    with open(teams_csv, newline="", encoding="utf-8-sig") as fh:
+        for row in csv.DictReader(fh):
+            team_name = (row.get("team_name") or "").strip()
+            if not team_name:
+                continue
+
+            template_name = (row.get("set_template") or team_name).strip()
+            template = templates_by_name.get(template_name)
+            if template is None:
+                template = {"normal": [], "broken": []}
+
+            passive_name = _clean_passive_name(row.get("passive_ability", ""))
+            passive_text = passives_by_team.get(team_name)
+            if passive_name and not passive_text:
+                passive_text = passive_name
+
+            team_cards[team_name] = {
+                "template_name": template_name,
+                "template": template,
+                "passive_text": passive_text,
+            }
+
+    return team_cards
+
+
+def _stable_player_signature(card: dict) -> str:
+    payload = {
+        "player_name": card["player_name"],
+        "role": card["role"],
+        "team": card["team"],
+        "abilities": card["abilities"],
+    }
+    blob = json.dumps(payload, sort_keys=True, ensure_ascii=True)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def _stable_team_signature(team_name: str, team_info: dict) -> str:
+    payload = {
+        "team_name": team_name,
+        "template_name": team_info.get("template_name"),
+        "template": team_info.get("template"),
+        "passive_text": team_info.get("passive_text"),
+    }
+    blob = json.dumps(payload, sort_keys=True, ensure_ascii=True)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def load_print_cache(cache_file: str) -> Dict[str, Dict[str, str]]:
+    if not os.path.exists(cache_file):
+        return {"players": {}, "teams": {}}
+    try:
+        with open(cache_file, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        players = payload.get("players", {})
+        teams = payload.get("teams", {})
+        if isinstance(players, dict) and isinstance(teams, dict):
+            return {"players": players, "teams": teams}
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {"players": {}, "teams": {}}
+
+
+def save_print_cache(cache_file: str, player_sigs: Dict[str, str], team_sigs: Dict[str, str]) -> None:
+    payload = {"players": player_sigs, "teams": team_sigs}
+    cache_dir = os.path.dirname(cache_file)
+    if cache_dir:
+        os.makedirs(cache_dir, exist_ok=True)
+    with open(cache_file, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2, sort_keys=True)
 
 
 def draw_card(
@@ -225,10 +334,10 @@ def draw_set_template_card(
     c: canvas.Canvas,
     x: float, y: float, w: float, h: float,
     team_name: str,
+    template: Dict[str, List[Tuple[str, str, str, str, str, str]]],
+    passive_text: Optional[str],
 ) -> None:
     """Draw a set-template reference card showing normal and broken-play set rules."""
-    # Get team-specific template or default to Grind
-    template = TEAM_SET_TEMPLATES.get(team_name, TEAM_SET_TEMPLATES["Grind"])
     
     # ── Card border ──────────────────────────────────────────────────────────
     c.setLineWidth(1.8)
@@ -325,7 +434,7 @@ def draw_set_template_card(
     cur_y -= 12
 
     # ── Team passive ability ──────────────────────────────────────────────────
-    passive = TEAM_PASSIVES.get(team_name)
+    passive = passive_text
     if passive:
         c.setFont("Helvetica-Bold", 7.5)
         c.drawCentredString(x + w / 2, cur_y, "PASSIVE ABILITY")
@@ -681,6 +790,8 @@ def make_pdf(
     cards: List[dict],
     output_path: str,
     teams: Optional[List[str]] = None,
+    team_card_data: Optional[Dict[str, dict]] = None,
+    include_reference_cards: bool = True,
 ) -> None:
     PAGE_W, PAGE_H = letter   # 612 × 792 points
     MARGIN = 0.45 * inch      # ~32 pt
@@ -711,7 +822,8 @@ def make_pdf(
         )
 
     # ── Team template cards (one per team, appended after ability cards) ─────
-    team_order = [t for t in ROSTER_MAP.values() if teams is None or t in teams]
+    team_data = team_card_data or {}
+    team_order = [t for t in ROSTER_MAP.values() if (teams is None or t in teams) and t in team_data]
     total_ability = len(cards)
     for j, team_name in enumerate(team_order):
         i = total_ability + j
@@ -722,16 +834,27 @@ def make_pdf(
         row = slot // COLS
         cx = MARGIN + col * (card_w + GUTTER)
         cy = PAGE_H - MARGIN - (row + 1) * card_h - row * GUTTER
-        draw_set_template_card(c, cx, cy, card_w, card_h, team_name)
+        draw_set_template_card(
+            c,
+            cx,
+            cy,
+            card_w,
+            card_h,
+            team_name,
+            team_data[team_name]["template"],
+            team_data[team_name].get("passive_text"),
+        )
 
     # ── Reference cards (rules + deck makeup) ─────────────────────────────────
-    reference_cards = [
-        ("Quick Set Rules", draw_quick_set_reference),
-        ("Attack Types", draw_attack_types_reference),
-        ("Blocking Rules", draw_blocking_reference),
-        ("Chase Rules", draw_chase_reference),
-        ("Deck Makeup", draw_deck_reference),
-    ]
+    reference_cards = []
+    if include_reference_cards:
+        reference_cards = [
+            ("Quick Set Rules", draw_quick_set_reference),
+            ("Attack Types", draw_attack_types_reference),
+            ("Blocking Rules", draw_blocking_reference),
+            ("Chase Rules", draw_chase_reference),
+            ("Deck Makeup", draw_deck_reference),
+        ]
     
     total_team_cards = len(team_order)
     for j, (ref_name, draw_func) in enumerate(reference_cards):
@@ -748,7 +871,7 @@ def make_pdf(
     c.save()
     total_cards = total_ability + total_team_cards + len(reference_cards)
     pages = (total_cards + COLS * ROWS - 1) // (COLS * ROWS)
-    print(f"Wrote {total_ability} player cards + {total_team_cards} team cards + {len(reference_cards)} reference cards across {pages} page(s) → {output_path}")
+    print(f"Wrote {total_ability} player cards + {total_team_cards} team cards + {len(reference_cards)} reference cards across {pages} page(s) -> {output_path}")
 
 
 def main() -> None:
@@ -757,16 +880,30 @@ def main() -> None:
     parser.add_argument("--output", default="ability_cards.pdf", help="Output PDF filename")
     parser.add_argument("--data-dir", default="data", help="Directory containing roster CSVs")
     parser.add_argument(
+        "--changed-only",
+        action="store_true",
+        help="Only include cards/templates changed since last cached print run",
+    )
+    parser.add_argument(
+        "--cache-file",
+        default="data/print_cache.json",
+        help="Cache file used by --changed-only mode",
+    )
+    parser.add_argument(
+        "--no-reference-cards",
+        action="store_true",
+        help="Do not append rules/deck reference cards",
+    )
+    parser.add_argument(
         "--teams", nargs="*",
         choices=list(ROSTER_MAP.values()),
         help="Only include cards for these teams (default: all)",
     )
     args = parser.parse_args()
 
-    team_map = load_team_assignments(args.data_dir)
+    team_cards = load_team_card_data(args.data_dir)
 
     # First, load ALL players from roster files
-    from collections import defaultdict
     players = defaultdict(lambda: {"role": None, "team": None, "abilities": []})
     
     # Load all players from rosters
@@ -780,20 +917,31 @@ def main() -> None:
                     player_name = row["player_name"]
                     players[player_name]["role"] = row["role"]
                     players[player_name]["team"] = display
+                    players[player_name]["print_card"] = True
     
     # Then overlay abilities from player_cards.csv
     with open(args.input, newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             player_name = row["player_name"]
             if player_name in players:
-                players[player_name]["abilities"].append({
-                    "ability_name": row["ability_name"],
-                    "description": row["description"],
-                })
+                if "print_card" in row and row.get("print_card", "").strip() != "":
+                    players[player_name]["print_card"] = _as_bool(row.get("print_card", ""), default=True)
+                if "skip_print" in row and row.get("skip_print", "").strip() != "":
+                    if _as_bool(row.get("skip_print", ""), default=False):
+                        players[player_name]["print_card"] = False
+
+                ability_name = (row.get("ability_name") or "").strip()
+                if ability_name:
+                    players[player_name]["abilities"].append({
+                        "ability_name": ability_name,
+                        "description": row.get("description", "").strip(),
+                    })
     
     # Convert to list of cards (one per player)
     cards = []
     for player_name, data in players.items():
+        if not data.get("print_card", True):
+            continue
         cards.append({
             "player_name": player_name,
             "role": data["role"],
@@ -801,11 +949,45 @@ def main() -> None:
             "team": data["team"],
         })
 
-    if not cards:
-        print("No cards matched — check your --teams filter.")
-        return
+    player_sigs = {card["player_name"]: _stable_player_signature(card) for card in cards}
+    team_sigs = {name: _stable_team_signature(name, info) for name, info in team_cards.items()}
 
-    make_pdf(cards, args.output, teams=args.teams)
+    selected_teams = [t for t in ROSTER_MAP.values() if args.teams is None or t in args.teams]
+    selected_team_data = {t: team_cards[t] for t in selected_teams if t in team_cards}
+
+    if args.changed_only:
+        cache = load_print_cache(args.cache_file)
+        old_player_sigs = cache.get("players", {})
+        old_team_sigs = cache.get("teams", {})
+
+        cards = [
+            card for card in cards
+            if player_sigs.get(card["player_name"]) != old_player_sigs.get(card["player_name"])
+        ]
+        selected_team_data = {
+            team_name: info
+            for team_name, info in selected_team_data.items()
+            if team_sigs.get(team_name) != old_team_sigs.get(team_name)
+        }
+
+        if not cards and not selected_team_data:
+            print("No changed player/team cards detected; nothing to print.")
+            return
+
+    if not cards:
+        print("No player cards matched print filter; generating only team/reference cards.")
+
+    make_pdf(
+        cards,
+        args.output,
+        teams=list(selected_team_data.keys()),
+        team_card_data=selected_team_data,
+        include_reference_cards=not args.no_reference_cards,
+    )
+
+    if args.changed_only:
+        save_print_cache(args.cache_file, player_sigs, team_sigs)
+        print(f"Updated print cache: {args.cache_file}")
 
 
 if __name__ == "__main__":

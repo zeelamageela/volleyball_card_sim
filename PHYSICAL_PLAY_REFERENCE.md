@@ -76,9 +76,13 @@ Dummy hand: [2, 4, 5, 7] → **2 even, 2 odd** → Tie
 
 | Result | Condition | Outcome |
 |--------|-----------|---------|
-| **KILL** | Attack > Block + 2 | Defender must dig |
-| **DEFLECT** | Attack > Block (0-2 diff) | Defender must dig (easier) |
-| **STUFFED** | Block ≥ Attack | Defender scores immediately |
+| **KILL** | Attack > Block | Defender must dig |
+| **DEFLECT** | Block - Attack is 0 to 4 | Dig side depends on deflect strength |
+| **STUFFED** | Block - Attack is 5 or more | Defender scores immediately |
+
+Deflect side split:
+- Block - Attack 0 to 2: ball deflects to defender side (defender digs)
+- Block - Attack 3 to 4: ball deflects to attacker side (attacker digs)
 
 ---
 

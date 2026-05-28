@@ -1,0 +1,6 @@
+team_name,passive_name,passive_description,is_active
+Blitz,TBD,Placeholder - aggressive/tempo ability,false
+Grind,Deep Bench,Hand size is 6 cards instead of 5,true
+Easy,Safe Setter,Setter zone digs never cause broken play,true
+Medium,Back Court Threat,All back-row attacks ignore the first blocker's card,true
+Hard,Elite Draw,"When drawing any card for play (serve/block/dig/attack), draw 2 cards and keep the higher value",true

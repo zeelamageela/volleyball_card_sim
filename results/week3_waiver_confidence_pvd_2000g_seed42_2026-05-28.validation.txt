@@ -1,0 +1,27 @@
+Balance Target Validation
+================================================================================
+SKIP | win_rate_a         | pvp  | Blitz vs Grind         | observed=n/a        target=[45.000, 55.000] (missing matchup row)
+SKIP | win_rate_a         | pvp  | Grind vs Blitz         | observed=n/a        target=[45.000, 55.000] (missing matchup row)
+PASS | win_rate_a         | pvd  | Blitz vs Easy          | observed=73.150     target=[70.000, 80.000]
+PASS | win_rate_a         | pvd  | Blitz vs Medium        | observed=60.900     target=[52.000, 62.000]
+PASS | win_rate_a         | pvd  | Blitz vs Hard          | observed=27.550     target=[25.000, 35.000]
+PASS | win_rate_a         | pvd  | Grind vs Easy          | observed=76.300     target=[70.000, 80.000]
+PASS | win_rate_a         | pvd  | Grind vs Medium        | observed=55.450     target=[52.000, 62.000]
+PASS | win_rate_a         | pvd  | Grind vs Hard          | observed=26.200     target=[25.000, 35.000]
+FAIL | avg_exchanges      | pvd  | Blitz vs Easy          | observed=1.765      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Blitz vs Medium        | observed=3.109      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Blitz vs Hard          | observed=2.220      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Grind vs Easy          | observed=1.853      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Grind vs Medium        | observed=3.270      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Grind vs Hard          | observed=2.223      target=[1.800, 3.500]
+PASS | top_endings_share  | pvd  | Blitz vs Easy          | observed=22.296     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Blitz vs Medium        | observed=41.452     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Blitz vs Hard          | observed=20.252     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Grind vs Easy          | observed=24.678     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Grind vs Medium        | observed=41.326     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Grind vs Hard          | observed=19.145     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+--------------------------------------------------------------------------------
+Summary: PASS=17 FAIL=1 SKIP=2
+
+
+EXIT_CODE=1

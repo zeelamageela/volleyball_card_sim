@@ -1,0 +1,45 @@
+template_name,set_type,set_name,card_range,quickset_to,lane1_front,lane2_front,lane3_front,lane1_back,lane2_back,lane3_back,max_hitters
+Blitz,normal,Quicks,1-3,OH/MB,OH,MB,—,—,—,—,2
+Blitz,normal,Strong Side,4-5,MB,OH,MB,—,OH,MB,OPP,3
+Blitz,normal,Weak Side,6-7,MB,—,MB,OPP,OH,MB,OPP,3
+Blitz,normal,High Outside,8-9,—,OH,—,OPP,OH,MB,OPP,4
+Blitz,normal,Gap Step,10,MB/OPP,OH/MB,OPP,-,OH,MB,OPP,4
+Blitz,broken,Scramble A,1-3,OH,OH,—,—,—,—,—,1
+Blitz,broken,Scramble B,4-7,—,OH,—,OPP,—,MB,—,2
+Blitz,broken,Scramble C,8-10,—,OH,—,OPP,—,MB,—,2
+Grind,normal,Wall,1-3,OH/MB/OPP,OH,MB,OPP,—,—,—,3
+Grind,normal,Anchor,4-5,—,OH,MB,—,OH,MB,OPP,3
+Grind,normal,Clamp,6-7,—,—,MB,OPP,OH,MB,OPP,3
+Grind,normal,Grind,8-9,—,OH,—,OPP,OH,MB,OPP,4
+Grind,normal,Siege,10,MB,OH,MB,OPP,OH,MB,OPP,4
+Grind,broken,Reset A,1-3,OH/MB,OH,MB,—,—,MB,—,2
+Grind,broken,Reset B,4-7,—,OH,—,OPP,—,MB,—,2
+Grind,broken,Reset C,8-10,—,—,MB,OPP,—,MB,—,2
+Easy,normal,Simple A,1-3,OH/MB,OH,MB,—,—,—,—,2
+Easy,normal,Simple B,4-5,—,OH,MB,—,—,—,—,2
+Easy,normal,Simple C,6-7,—,—,MB,OPP,—,—,OPP,2
+Easy,normal,Simple D,8-9,—,OH,—,OPP,—,—,OPP,3
+Easy,normal,Simple E,10,—,OH,—,OPP,OH,—,OPP,3
+Easy,broken,Panic A,1-3,OH,OH,—,—,—,—,—,1
+Easy,broken,Panic B,4-7,—,OH,—,—,—,—,—,1
+Easy,broken,Panic C,8-10,—,OH,—,OPP,—,—,—,2
+Medium,normal,Tempo A,1-4,OH/MB/OPP,OH,MB,OPP,—,—,—,3
+Medium,normal,Tempo B,5-6,—,OH,MB,—,OH,MB,OPP,3
+Medium,normal,Tempo C,7-8,—,—,MB,OPP,OH,MB,OPP,3
+Medium,normal,Tempo D,9-10,—,OH,—,OPP,OH,MB,OPP,4
+Medium,broken,Recovery A,1-4,OH/MB,OH,MB,—,—,MB,—,2
+Medium,broken,Recovery B,5-7,—,OH,—,OPP,—,MB,—,2
+Medium,broken,Recovery C,8-10,—,—,MB,OPP,—,MB,—,2
+Hard,normal,Elite A,1-4,OH/MB/OPP,OH,MB,OPP,—,MB,—,3
+Hard,normal,Elite B,5-6,—,OH,MB,OPP,OH,MB,OPP,4
+Hard,normal,Elite C,7-8,—,—,MB,OPP,OH,MB,OPP,4
+Hard,normal,Elite D,9-10,—,OH,—,OPP,OH,MB,OPP,5
+Hard,broken,Pressure A,1-4,OH/MB,OH,MB,—,—,MB,—,2
+Hard,broken,Pressure B,5-7,—,OH,—,OPP,—,MB,—,2
+Hard,broken,Pressure C,8-10,—,—,MB,OPP,OH,MB,OPP,3
+EasyLite,normal,Lite A,1-4,OH/MB,OH,MB,—,—,—,—,1
+EasyLite,normal,Lite B,5-7,—,OH,MB,—,—,—,—,1
+EasyLite,normal,Lite C,8-10,—,OH,—,OPP,—,—,—,1
+EasyLite,broken,Lite Panic A,1-4,OH,OH,—,—,—,—,—,1
+EasyLite,broken,Lite Panic B,5-7,—,OH,—,—,—,—,—,1
+EasyLite,broken,Lite Panic C,8-10,—,OH,—,OPP,—,—,—,1

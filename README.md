@@ -1,270 +1,97 @@
 # Volleyball Card Sim
 
-A turn-based card simulation of a volleyball match. Each rally is resolved by
-players committing cards from their hand to serve, receive, set, attack, and
-block. Abilities on player cards modify the outcome of each phase.
+Volleyball card-game simulation engine with AI strategies, player abilities, passive team effects, and printable card generation.
 
----
+## Reference hierarchy
+
+Use this order when information conflicts:
+1. Engine behavior in `src/`
+2. CSV docs you edit (`data/set_templates.csv`, `data/teams.csv`, `data/team_passives.csv`, `data/deck_types.csv`)
+3. Session notes and historical docs
 
 ## Requirements
 
-- Python 3.12 or newer
-- No third-party packages — pure standard library
+- Python 3.12+
+- Optional: `reportlab` for `make_cards.py`
 
----
-
-## Setup (macOS / Linux)
+Install dependencies:
 
 ```bash
-# 1. Clone the repo
-git clone <your-repo-url>
-cd volleyball_card_sim
-
-# 2. Create a virtual environment
-python3 -m venv .venv
-
-# 3. Activate it
-source .venv/bin/activate
-
-# 4. No packages to install — you're ready
+python -m pip install -r requirements.txt
 ```
 
-> On Windows use `.venv\Scripts\activate` instead, and `python` instead of `python3`.
+## Common commands
 
----
+Simulate PvP (Blitz vs Grind):
 
-## Running the simulation
-
-### Quick start (uses default teams)
 ```bash
-python main.py --games 1000 --seed 42 \
+python main.py --mode pvp --strategy-a smart --strategy-b smart --games 1000 --seed 42 \
   --player-cards data/player_cards.csv \
-  --roster-a data/team_a.csv \
-  --roster-b data/team_b.csv
+  --roster-a data/team_blitz.csv \
+  --roster-b data/team_grind.csv
 ```
 
-### All CLI flags
-| Flag | Default | Description |
-|---|---|---|
-| `--games N` | 1000 | Number of games to simulate |
-| `--seed N` | random | RNG seed for reproducibility |
-| `--player-cards FILE` | required | CSV of player abilities |
-| `--roster-a FILE` | required | Team A roster CSV |
-| `--roster-b FILE` | optional | Team B roster CSV (omit for pvd mode) |
-| `--mode {pvp,pvd}` | `pvp` | `pvp` = both real teams; `pvd` = Team A vs Dummy |
-| `--verbose` | off | Print every rally result |
+Simulate PvD (Blitz vs Easy Dummy):
 
-### Convenience scripts
 ```bash
-# macOS / Linux
-bash run_sim.sh
-
-# Windows
-run_sim.bat
+python main.py --mode pvd --strategy-a smart --games 1000 --seed 42 \
+  --player-cards data/player_cards.csv \
+  --roster-a data/team_blitz.csv \
+  --roster-b data/team_dummy_easy.csv
 ```
 
-### Ability/balance report
+Interactive game:
+
 ```bash
-python report.py --player-cards data/player_cards.csv \
-                 --roster-a data/team_a.csv \
-                 --roster-b data/team_b.csv
+python play.py --your-team data/team_blitz.csv --ai-team data/team_dummy_medium.csv
 ```
 
-### Tests
+Generate printable cards PDF:
+
 ```bash
-python -m pytest tests/
+python make_cards.py --output ability_cards.pdf
 ```
 
----
+Run full balance matrix (CSV output):
 
-## Project layout
-
-```
-volleyball_card_sim/
-├── main.py                  # CLI entry point
-├── report.py                # Ability analysis and balance report
-├── run_sim.bat              # Windows quick-run script
-├── run_sim.sh               # macOS/Linux quick-run script
-├── requirements.txt         # No external deps — Python 3.12+ only
-├── data/
-│   ├── player_cards.csv     # Master ability table (all players)
-│   ├── team_a.csv           # Team A roster (player_name, role)
-│   ├── team_b.csv           # Team B roster
-│   └── team_dummy.csv       # Fixed dummy team for pvd mode
-├── src/
-│   ├── abilities.py         # Ability loading and engine
-│   ├── cards.py             # Card / Deck definitions
-│   ├── game.py              # Rally resolution (phase-by-phase)
-│   ├── game_state.py        # Score tracking
-│   ├── players.py           # Player / GridPlayer / Team
-│   ├── simulation.py        # Multi-game runner
-│   └── strategies.py        # RandomStrategy + DummyStrategy
-└── tests/
-    └── test_game.py
+```bash
+python balance_matrix.py --games 1000 --seed 42 --mode all --output balance_matrix_results.csv
 ```
 
----
+Passive checks:
+
+```bash
+python test_passives.py
+python test_balance_passives.py
+```
 
 ## Data files
 
-### `data/player_cards.csv`
+- `data/player_cards.csv`: player abilities
+- `data/team_blitz.csv`: Blitz roster
+- `data/team_grind.csv`: Grind roster
+- `data/team_dummy_easy.csv`: Easy dummy roster
+- `data/team_dummy_medium.csv`: Medium dummy roster
+- `data/team_dummy_hard.csv`: Hard dummy roster
+- `data/teams.csv`: team metadata doc
+- `data/team_passives.csv`: passive definitions doc
+- `data/set_templates.csv`: set template definitions doc
+- `data/deck_types.csv`: deck composition definitions by `deck_type`
 
-Each row is one ability for one player.
+## Current notes
 
-| Column | Description |
-|---|---|
-| `player_name` | Matches names in roster CSVs |
-| `role` | `Setter / OPP / MB / OH / DS / Libero` |
-| `ability_name` | Display name |
-| `trigger` | When it fires (see triggers table below) |
-| `condition_field` | Field checked for conditional abilities (blank = always fires) |
-| `condition_value` | Threshold for the condition (e.g. `>=6`) |
-| `effect` | What the ability does (see effects table below) |
-| `effect_value` | Magnitude |
-| `is_active` | Reserved — always `false` for now |
+- Master roadmap and progress tracker: SEASON1_MASTER_PLAN.md
+- Quick run commands: SIMULATION_QUICK_GUIDE.md
+- Season roadmap checkpoint: SEASON1_WEEK1.md
+- Week 2 closeout: SEASON1_WEEK2.md
+- Week 3 active checkpoint: SEASON1_WEEK3.md
+- Team identity checklist: TEAM_IDENTITY_CHECKLIST.md
+- Identity roster proposal: IDENTITY_ROSTER_PROPOSAL.md
+- Identity experiment notes: results/season1_week2_identity_notes.md
+- Quick rules reference: `QUICK_REFERENCE.md` (aligned to engine behavior)
+- Physical flow reference: `PHYSICAL_PLAY_REFERENCE.md`
+- Historical handoff logs: `SESSION_NOTES.md`, `SESSION_NOTES_phase6.md`
 
-**Triggers:** `on_serve`, `on_set`, `on_attack`, `on_block`, `on_block_deflection`, `on_dig`, `on_dig_success`, `on_dig_failure`, `on_chase`, `on_tip`
+## Historical context
 
-**Effects:** `serve_value_bonus`, `set_value_delta`, `tip_threshold_delta`, `over_block_bonus`, `adjacent_block_bonus`, `pierce_block`, `seam_shot`, `roll_shot`, `heavy_spin`, `dig_threshold`, `deflect_dig_threshold`, `chase_card_bonus`, `attack_value_bonus`, `single_block_only`, `hold_card`, `no_chase`, `wipe_block`
-
-### `data/team_a.csv` / `data/team_b.csv`
-
-```csv
-player_name,role
-Lancer,Setter
-Cannon,OPP
-Fortress,MB
-Spike,OH
-Hustle,DS
-Hawk,Libero
-```
-
-Player names must exactly match entries in `player_cards.csv`.
-
----
-
-## Card deck
-
-28 cards with values 1–10, weighted toward the mid-range:
-
-| Value | Count |
-|---|---|
-| 1 | 1 |
-| 2 | 2 |
-| 3 | 3 |
-| 4 | 4 |
-| 5 | 4 |
-| 6 | 4 |
-| 7 | 4 |
-| 8 | 3 |
-| 9 | 2 |
-| 10 | 1 |
-
-Each team draws from their own shuffled copy. Players start each turn with a
-5-card hand and refill after committing attack cards.
-
----
-
-## Attack lanes
-
-| Lane | Role |
-|---|---|
-| 1 | OH (outside hitter / left side) |
-| 2 | MB (middle blocker) |
-| 3 | OPP (opposite / right side) |
-
-The set card value determines which lanes are eligible for that rally's attack.
-`SET_ELIGIBLE_LANES` in `src/game.py` maps set value → eligible lane list.
-
----
-
-## Blocking model
-
-Blocking is **attack-lane-aware**: the blocker always covers actual attack
-lanes rather than guessing.
-
-- **Double-block** (2 cards) goes on the primary threat lane.
-- **Single-block** (1 card) covers any remaining attack lane.
-- The attacker then chooses the least-blocked lane to commit to.
-
-Resolution:
-- `attack > block` → **Kill** (attacker scores, or dig attempted)
-- `block > attack` by 0–2 → **Deflect** (soft block, dig attempted)
-- `block > attack` by 3+  → **Stuffed** (blocker scores immediately)
-
----
-
-## Game modes
-
-| Mode | Description |
-|---|---|
-| `pvp` | Both teams use `RandomStrategy` with team-specific abilities |
-| `pvd` | Team A uses `RandomStrategy`; Team B is `DummyStrategy` (no abilities, deterministic decisions) |
-
-`DummyStrategy` always blocks the middle-priority lane, avoids the double-block
-when attacking, always tips, and plays max card on serve/receive/set/dig.
-
----
-
-## Phase 5 - Comprehensive Matching System (Latest Update)
-
-**See SESSION_NOTES.md for complete details of the most recent development session.**
-
-### What's New
-
-**1. Increased Attacker Capacity**
-- Sets 1-7 now allow 3 attackers (was 2-3)
-- Sets 8-10 now allow 4 attackers (was 3)
-- Creates more tactical depth and matching opportunities
-
-**2. Comprehensive Card Matching**
-
-When cards of identical value appear in specific patterns, rallies resolve immediately:
-
-**Single Attacker Scenarios:**
-- 1 attacker matches 1+ blockers → **Attacker wins** (deflection out)
-- 2 blockers match each other → **Defender wins** (over-commit)
-
-**Multiple Attacker Scenarios:**
-- 2+ attackers match each other → **Defender wins** (offensive confusion)
-- Attacker + blocker match → **Cards removed, rally continues**
-- 2 blockers match → **Defender wins** (over-commit)
-
-**Multi-Lane Matching:**
-- Lanes processed high-to-low by attack value
-- If all lanes eliminated → Last lane determines winner
-
-**3. New Abilities**
-- **FORCE_HIGH_BLOCK**: Ignore blocks ≤ threshold (Titan, Breaker)
-- **DECK_SWAP_OPPONENT**: Replace opponent's highest card on dig (Thief)
-- **WILD_BLOCK**: Low cards block any lane (Flex, Shield) - *defined, not yet in strategy*
-
-### Balance Results (200 games)
-
-**Win Rates with Matching:**
-- Smart vs Easy: 58% (was 69%)
-- Smart vs Medium: 49-51% (was 66%)
-- Smart vs Hard: 53-57% (was 70%)
-
-**Scoring Distribution:**
-- 48-50%: Stuffed blocks
-- 14-15%: Blocker-blocker matches (defender wins)
-- 12-13%: Single attacker deflections (attacker wins)
-- 12-13%: Tips not dug
-- ~27% of all rallies resolved by matching mechanics
-
-### Testing
-
-```bash
-# Test Phase 5 team
-python3 main.py --games 100 --mode pvd --strategy-a smart \
-  --roster-a data/team_phase5.csv --roster-b data/team_dummy_hard.csv \
-  --player-cards data/player_cards.csv
-
-# Full statistics
-python3 main.py --games 200 --mode pvd --strategy-a smart \
-  --roster-a data/team_test1.csv --roster-b data/team_dummy_medium.csv \
-  --player-cards data/player_cards.csv
-```
-
-**Phase 5 Status:** Complete and tested. Matching system creates competitive 50-60% win rates with significant tactical depth.
+Older assumptions and phased writeups are preserved in session/changelog files for evolution tracking. Treat them as historical unless they match the current engine.

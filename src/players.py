@@ -45,20 +45,6 @@ class SetTemplate:
     max_attackers: int
 
 
-@dataclass
-class SetTemplate:
-    """
-    Defines which lanes are available for attack after a set.
-    
-    front_lanes: Lane indices available for front-row attackers
-    back_lanes: Lane indices available for back-row attackers (DS/Setter, NOT Libero)
-    max_attackers: Maximum number of cards to place (1, 2, or 3)
-    """
-    front_lanes: List[int]
-    back_lanes: List[int]
-    max_attackers: int
-
-
 def _build_setter_templates() -> Dict[int, SetTemplate]:
     """
     Normal play: Setter sets the ball.
@@ -164,7 +150,9 @@ class Team:
         rng: random.Random, 
         use_hand: bool = True, 
         deck_type: str = "standard",
-        passive_ability: Optional[str] = None
+        passive_ability: Optional[str] = None,
+        setter_templates: Optional[Dict[int, SetTemplate]] = None,
+        broken_play_templates: Optional[Dict[int, SetTemplate]] = None,
     ) -> None:
         self.name = name
         self.deck = Deck(rng, deck_type=deck_type)
@@ -172,6 +160,10 @@ class Team:
         self.held_card: Optional[Card] = None
         self.use_hand = use_hand
         self.passive_ability = passive_ability
+        self.setter_templates = setter_templates if setter_templates is not None else SETTER_TEMPLATES
+        self.broken_play_templates = (
+            broken_play_templates if broken_play_templates is not None else BROKEN_PLAY_TEMPLATES
+        )
         self.ability_engine: Optional[AbilityEngine] = None
         self.players: List[GridPlayer] = [
             GridPlayer(PlayerRole.SETTER, 1),

@@ -17,15 +17,13 @@ from pathlib import Path
 from src.strategies import RandomStrategy, DummyStrategy, SmartStrategy
 from src.simulation import Simulation
 from src.abilities import load_player_cards, build_ability_engine
+from src.runtime_config import resolve_team_runtime_config
 
 
 STRATEGIES = {
     "random": RandomStrategy,
     "smart": SmartStrategy,
 }
-
-DUMMY_ROSTER = Path("data/team_dummy.csv")
-
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -65,7 +63,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--player-cards",
         type=Path,
-        default=None,
+        default=Path("data/player_cards.csv"),
         metavar="CSV",
         help="CSV file defining player cards and abilities (e.g. data/player_cards.csv)",
     )
@@ -89,6 +87,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="pvp",
         help="pvp = player vs player (default); pvd = player vs dummy",
     )
+    parser.add_argument(
+        "--team-a-name",
+        type=str,
+        default="Blitz",
+        help="Team A name from data/teams.csv (used when roster-a is omitted or for label/config lookup)",
+    )
+    parser.add_argument(
+        "--team-b-name",
+        type=str,
+        default=None,
+        help="Team B name from data/teams.csv (defaults to Grind for pvp, Easy for pvd)",
+    )
+    parser.add_argument(
+        "--teams-csv",
+        type=Path,
+        default=Path("data/teams.csv"),
+        help="Team configuration CSV",
+    )
+    parser.add_argument(
+        "--team-passives-csv",
+        type=Path,
+        default=Path("data/team_passives.csv"),
+        help="Team passives CSV",
+    )
+    parser.add_argument(
+        "--set-templates-csv",
+        type=Path,
+        default=Path("data/set_templates.csv"),
+        help="Set template CSV",
+    )
     return parser.parse_args(argv)
 
 
@@ -101,6 +129,23 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Using random seed: {seed}  (pass --seed {seed} to reproduce)")
 
     is_pvd = (args.mode == "pvd")
+    team_b_name = args.team_b_name or ("Easy" if is_pvd else "Grind")
+
+    # Resolve runtime team settings from CSV source-of-truth files.
+    cfg_a = resolve_team_runtime_config(
+        roster_path=args.roster_a,
+        team_name=args.team_a_name,
+        teams_csv=args.teams_csv,
+        passives_csv=args.team_passives_csv,
+        set_templates_csv=args.set_templates_csv,
+    )
+    cfg_b = resolve_team_runtime_config(
+        roster_path=args.roster_b,
+        team_name=team_b_name,
+        teams_csv=args.teams_csv,
+        passives_csv=args.team_passives_csv,
+        set_templates_csv=args.set_templates_csv,
+    )
 
     strat_rng_a = random.Random(seed ^ 0xAAAA_AAAA)
 
@@ -117,23 +162,35 @@ def main(argv: list[str] | None = None) -> None:
         if not args.player_cards.exists():
             sys.exit(f"Error: player-cards file not found: {args.player_cards}")
         player_cards = load_player_cards(args.player_cards)
-        engine_a = build_ability_engine(args.roster_a, player_cards)
-        engine_b = build_ability_engine(args.roster_b, player_cards)
+        if cfg_a.roster_path is not None and not cfg_a.roster_path.exists():
+            sys.exit(f"Error: Team A roster file not found: {cfg_a.roster_path}")
+        if cfg_b.roster_path is not None and not cfg_b.roster_path.exists():
+            sys.exit(f"Error: Team B roster file not found: {cfg_b.roster_path}")
+        engine_a = build_ability_engine(cfg_a.roster_path, player_cards)
+        engine_b = build_ability_engine(cfg_b.roster_path, player_cards)
         if engine_a:
-            print(f"Team A abilities loaded from {args.roster_a}")
+            print(f"Team A abilities loaded from {cfg_a.roster_path}")
         if engine_b:
-            print(f"Team B abilities loaded from {args.roster_b}")
+            print(f"Team B abilities loaded from {cfg_b.roster_path}")
 
-    name_b = "Dummy" if is_pvd else "Team B"
     sim = Simulation(
         strategy_a, strategy_b,
         n_games=args.games,
         seed=seed,
         engine_a=engine_a,
         engine_b=engine_b,
-        name_a="Team A",
-        name_b=name_b,
-        use_hand_b=not is_pvd,
+        name_a=cfg_a.team_name,
+        name_b=cfg_b.team_name,
+        use_hand_a=cfg_a.use_hand,
+        use_hand_b=cfg_b.use_hand,
+        deck_type_a=cfg_a.deck_type,
+        deck_type_b=cfg_b.deck_type,
+        passive_ability_a=cfg_a.passive_ability,
+        passive_ability_b=cfg_b.passive_ability,
+        setter_templates_a=cfg_a.setter_templates,
+        setter_templates_b=cfg_b.setter_templates,
+        broken_play_templates_a=cfg_a.broken_play_templates,
+        broken_play_templates_b=cfg_b.broken_play_templates,
     )
 
     mode_label = f"{args.strategy_a} vs dummy" if is_pvd else f"{args.strategy_a} vs {args.strategy_b}"

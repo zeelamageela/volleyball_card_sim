@@ -1,164 +1,80 @@
-# Quick Reference - Current Game State
+# Quick Reference (Engine-Aligned)
 
-**Last Updated:** Phase 5 Complete (May 2026)
+Last updated: May 27, 2026
 
-## 🎮 Current Balance
+This file is a short engine behavior guide.
 
-| Metric | Value | Status |
-|--------|-------|--------|
-| Smart vs Easy | 58% win rate | ✓ Balanced |
-| Smart vs Medium | 49-51% win rate | ✓ Competitive |
-| Smart vs Hard | 53-57% win rate | ✓ Slight skill edge |
-| Matching frequency | ~27% of rallies | ✓ Significant impact |
-| Avg exchanges/rally | 1.85-2.00 | ✓ Tactical depth |
+Authoritative sources:
+- Runtime behavior: `src/game.py`, `src/players.py`, `src/strategies.py`
+- Editable data source-of-truth docs: `data/set_templates.csv`, `data/teams.csv`, `data/team_passives.csv`, `data/deck_types.csv`
 
-## 🏐 Core Game Rules
+If docs and engine disagree, engine wins.
 
-**Deck:** 28 cards (1×1, 2×2, 3×3, 4×4, 5×4, 6×4, 7×4, 8×3, 9×2, 10×1)  
-**Hand Size:** 5 cards  
-**Win Condition:** First to 15 points (rally scoring)  
-**Positions:** Setter, OPP (opposite), MB (middle), OH (outside), DS (defensive), Libero
+## Core rules
 
-## 🎯 Attack System
+- Win condition: first team to 15 points.
+- Team hand size: 5 by default.
+- Grind passive `Deep Bench`: hand size 6.
+- Lanes: 1=OH, 2=MB, 3=OPP.
 
-**Set Templates:**
-- Sets 1-3: Quick (lanes 1-2-3 front, max 3 attackers)
-- Sets 4-5: Strong Side (lanes 1-2 front, 1-2-3 back, max 3)
-- Sets 6-7: Weak Side (lanes 2-3 front, 1-2-3 back, max 3)
-- Sets 8-9: High Outside (lanes 1-3 front, 1-2-3 back, **max 4**)
-- Set 10: Free Choice (all lanes, **max 4**)
+## Set templates in engine
 
-**Attack Resolution:**
-- Attack > Block + 3 → **Kill** (dig required)
-- Attack > Block (0-2 diff) → **Deflect** (tip dig)
-- Block ≥ Attack → **Stuffed** (defender scores)
+Normal play (`SETTER_TEMPLATES`):
+- 1-3: front lanes 1/2/3, back none, max attackers 3
+- 4-5: front 1/2, back 1/2/3, max 3
+- 6-7: front 2/3, back 1/2/3, max 3
+- 8-9: front 1/3, back 1/2/3, max 4
+- 10: front 1/2/3, back 1/2/3, max 4
 
-## 🔄 Matching System (27% of rallies)
+Broken play (`BROKEN_PLAY_TEMPLATES`):
+- 1-3: front 1/2, back 2, max 2
+- 4-7: front 1/3, back 2, max 1
+- 8-10: front 2/3, back 2, max 2
 
-**Blocker-Blocker Match:** 2 identical block values → **Defender wins** (~14% of rallies)
+## Matching behavior
 
-**Attacker-Blocker Match:** Attacker matches blocker → **Lane eliminated**; attacker chooses remaining lanes (~12% of rallies)
+- Blocker-blocker same value in one lane:
+  blockers neutralize, lane becomes unblocked (0 block value), rally continues.
+- Attacker-attacker same value in one lane:
+  lane eliminated, defender credited for that elimination result.
+- Single-attacker attacker-blocker same value:
+  lane eliminated.
+- Multi-attacker attacker-blocker matches:
+  matched cards are removed; lane can remain active if unmatched attacker cards remain.
+- Lanes are processed high-to-low by attack value.
+- If all attack lanes are eliminated, rally ends using the final elimination result.
 
-**Attacker-Attacker Match:** Front+back same value → **Defender wins** (<1% of rallies)
+## Attack resolution (`resolve_attack`)
 
-**Partial Match:** Multi-attacker, some match blockers → **Cards removed, continue**
+- If attack > block: `KILL`
+- Else let diff = block - attack:
+  - diff 0-4: `DEFLECT`
+  - diff 5+: `STUFFED`
 
-**Multi-Lane:** Processed high-to-low; if all lanes are eliminated, **Defender wins**
+Deflect side:
+- diff 0-2: deflect to defender side (defender digs)
+- diff 3-4: deflect to attacker side (attacker digs)
 
-## ⚡ Active Abilities (50+ total)
+## Team passives in engine
 
-**Phase 5 Additions:**
-- `FORCE_HIGH_BLOCK`: Ignore blocks ≤ threshold
-- `DECK_SWAP_OPPONENT`: Replace opponent's highest card on dig
-- `WILD_BLOCK`: Low cards block any lane (not in strategy yet)
+- `Deep Bench` (Grind): +1 hand size.
+- `Safe Setter` (Easy): setter digs do not force broken play.
+- `Back Court Threat` (Medium): back-row attacks ignore first blocker.
+- `Elite Draw` (Hard): action draws use draw-2 keep-high.
 
-**Phase 4 Core:**
-- `SLIDE_LANES`: Shift after blocks revealed
-- `BACK_ROW_PIERCE`: Ignore blocks on back-row attacks
-- `MIN_BLOCKER_ONLY`: Only min block card counts
+## Dummy blocking rule (implemented)
 
-**Classic Effects:**
-- Value bonuses (attack, block, serve, set, dig, chase)
-- Thresholds (dig, deflect, tip)
-- Pierce effects (block bypass)
-- Special shots (wipe, roll, seam)
-- Card management (hold, exchange)
+When 2 lanes are attacked:
+- even-majority in dummy hand -> double block rightmost lane
+- odd-majority or tie -> double block leftmost lane
 
-## 📊 Typical Scoring (200 games)
+When 1 lane is attacked:
+- up to 3 blockers on that lane
 
-| Method | Frequency | Winner |
-|--------|-----------|---------|
-| Stuffed blocks | 48-50% | Attacker |
-| Blocker-blocker match | 14-15% | Defender |
-| Tips not dug | 12-13% | Attacker |
-| Single deflections | 12-13% | Attacker |
-| Kills (chase failed) | 1.5-2% | Attacker |
-| Other | <2% | Varies |
+When 3 lanes are attacked:
+- one blocker per lane (first 3 cards)
 
-## 🤖 AI Strategies
+## Notes
 
-**RandomStrategy:**
-- Random legal decisions
-- 1% win rate vs dummy
-- Baseline comparison
-
-**SmartStrategy:**
-- Odd/even lane logic
-- Setter targeting
-- Tactical matching awareness
-- 50-60% win rate vs dummy
-
-**DummyStrategy:**
-- Easy: Basic decisions
-- Medium: Improved blocking
-- Hard: Advanced positioning
-
-## 📂 Key Files
-
-**Core Game Logic:**
-- `src/game.py`: Rally execution, matching system (lines 167-270)
-- `src/players.py`: Roles, set templates
-- `src/abilities.py`: 50+ ability definitions
-
-**Strategy AI:**
-- `src/strategies.py`: Random, Smart, Dummy implementations
-
-**Data:**
-- `data/player_cards.csv`: 50+ players with abilities
-- `data/team_*.csv`: Various test rosters
-- `data/team_phase5.csv`: Latest ability showcase
-
-**Documentation:**
-- `SESSION_NOTES.md`: Complete Phase 5 development details
-- `CHANGELOG.md`: Version history
-- `README.md`: Project overview
-
-## 🧪 Quick Test Commands
-
-```bash
-# Standard balance test
-python3 main.py --games 200 --mode pvd --strategy-a smart \
-  --roster-a data/team_test1.csv \
-  --roster-b data/team_dummy_medium.csv \
-  --player-cards data/player_cards.csv
-
-# Phase 5 abilities
-python3 main.py --games 100 --mode pvd --strategy-a smart \
-  --roster-a data/team_phase5.csv \
-  --roster-b data/team_dummy_hard.csv \
-  --player-cards data/player_cards.csv
-
-# Reproducible test
-python3 main.py --games 100 --seed 12345 --mode pvd --strategy-a smart
-```
-
-## 🚧 Known Limitations
-
-1. WILD_BLOCK defined but not used by strategy AI
-2. SmartStrategy doesn't predict matching scenarios
-3. No EXCHANGE_CARD ability yet (was proposed)
-4. Limited PvP testing (mostly PvD focus)
-
-## 🎯 Recommended Next Steps
-
-**High Priority:**
-- Implement WILD_BLOCK in SmartStrategy
-- Add matching prediction/exploitation
-- Create more Phase 5 test teams
-
-**Medium Priority:**
-- EXCHANGE_CARD ability if desired
-- Balance tuning for FORCE_HIGH_BLOCK
-- Ability trigger statistics tracking
-
-**Low Priority:**
-- Multi-lane combo bonuses
-- Additional matching patterns
-- Advanced chase mechanics
-
----
-
-**System Status:** ✅ Stable, tested, production-ready  
-**Performance:** ~50-100 games/second  
-**Test Coverage:** 1,500+ games simulated  
-**Last Major Update:** Phase 5 Comprehensive Matching System
+- `WILD_BLOCK` exists in ability definitions but is not currently integrated into strategy placement logic.
+- For tuning workflows, update CSV docs first, then apply matching code/runtime updates as needed.
