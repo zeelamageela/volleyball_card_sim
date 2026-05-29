@@ -1,0 +1,88 @@
+Team A abilities loaded from data\team_draft_even_b.csv
+Team B abilities loaded from data\team_dummy_easy.csv
+
+Running 2,000 games  (smart vs dummy)...
+
+────────────────────────────────────────
+  Games played        : 2000
+  EvenB               :  1694 wins  (84.7%)
+  Easy                :   306 wins  (15.3%)
+  Avg rallies/game   : 25.1
+  Avg exchanges/rally: 1.82
+────────────────────────────────────────
+  Point-Scoring Efficiency (per rally):
+    EvenB                  29096 scored /  21088 lost   PSE +16.0%   eff ratio 1.38x
+      Hit kills                :   1203  (4.1%)
+      Tip kills                :   3556  (12.2%)
+      Aces                     :    376  (1.3%)
+      Stuffs                   :   9322  (32.0%)
+      Deflections              :   4671  (16.1%)
+      Other                    :   9968  (34.3%)
+    Easy                   21088 scored /  29096 lost   PSE -16.0%   eff ratio 0.72x
+      Hit kills                :  12904  (61.2%)
+      Tip kills                :   5266  (25.0%)
+      Aces                     :     26  (0.1%)
+      Stuffs                   :   2254  (10.7%)
+      Deflections              :     29  (0.1%)
+      Opp. errors              :      2  (0.0%)
+      Other                    :    607  (2.9%)
+────────────────────────────────────────
+  Rally endings (all types):
+     11576x  Stuffed
+      8822x  Tip not dug
+      4700x  Deflect not dug
+      2582x  Attacker-blocker match (lane 1, value 7) — lane eliminated
+      2484x  Attacker-blocker match (lane 1, value 8) — lane eliminated
+      1579x  Heavy spin not dug, no chase (attack=8, dig=4)
+      1505x  Heavy spin not dug, no chase (attack=9, dig=6)
+      1395x  Heavy spin not dug, no chase (attack=8, dig=5)
+      1377x  Heavy spin not dug, no chase (attack=9, dig=4)
+      1348x  Heavy spin not dug, no chase (attack=9, dig=5)
+      1290x  Attacker-blocker match (lane 1, value 6) — lane eliminated
+      1267x  Attacker-blocker match (lane 1, value 9) — lane eliminated
+      1029x  Attacker-blocker match (lane 1, value 5) — lane eliminated
+       947x  Attacker-blocker match (lane 1, value 4) — lane eliminated
+       798x  Heavy spin not dug, no chase (attack=10, dig=4)
+       776x  Heavy spin not dug, no chase (attack=10, dig=5)
+       742x  Heavy spin not dug, no chase (attack=8, dig=3)
+       689x  Kill (dig failed)
+       632x  Heavy spin not dug, no chase (attack=10, dig=6)
+       623x  Heavy spin not dug, no chase (attack=9, dig=3)
+       592x  Heavy spin not dug, no chase (attack=9, dig=7)
+       456x  Heavy spin not dug, no chase (attack=10, dig=7)
+       402x  Serve ace (chase failed)
+       345x  Heavy spin not dug, no chase (attack=10, dig=3)
+       304x  Attacker-blocker match (lane 1, value 10) — lane eliminated
+       286x  Heavy spin not dug, no chase (attack=9, dig=8)
+       252x  Attacker-blocker match (lane 1, value 3) — lane eliminated
+       168x  Heavy spin not dug, no chase (attack=8, dig=2)
+       164x  Heavy spin not dug, no chase (attack=9, dig=2)
+       107x  Heavy spin not dug, no chase (attack=10, dig=2)
+       105x  Kill (chase failed)
+        91x  Heavy spin not dug, no chase (attack=8, dig=1)
+        79x  Attacker-blocker match (lane 3, value 7) — lane eliminated
+        78x  Heavy spin not dug, no chase (attack=10, dig=8)
+        69x  Heavy spin not dug, no chase (attack=9, dig=1)
+        67x  Heavy spin not dug, no chase (attack=10, dig=9)
+        60x  Attacker-blocker match (lane 1, value 2) — lane eliminated
+        59x  Attacker-blocker match (lane 3, value 8) — lane eliminated
+        57x  Attacker-blocker match (lane 3, value 4) — lane eliminated
+        49x  Heavy spin not dug, no chase (attack=8, dig=7)
+        43x  Heavy spin not dug, no chase (attack=10, dig=1)
+        39x  Attacker-blocker match (lane 3, value 6) — lane eliminated
+        37x  Attacker-blocker match (lane 3, value 5) — lane eliminated
+        27x  Attacker-blocker match (lane 1, value 1) — lane eliminated
+        23x  Heavy spin not dug, no chase (attack=8, dig=6)
+        21x  Attacker-blocker match (lane 3, value 3) — lane eliminated
+        14x  Attacker-blocker match (lane 3, value 9) — lane eliminated
+         8x  Attacker-blocker match (lane 3, value 2) — lane eliminated
+         5x  Attacker-blocker match (lane 2, value 5) — lane eliminated
+         4x  Attacker-blocker match (lane 2, value 3) — lane eliminated
+         3x  Attacker-blocker match (lane 3, value 1) — lane eliminated
+         2x  Front+back attackers match (lane 1, value 5) - offensive confusion
+         2x  Attacker-blocker match (lane 2, value 2) — lane eliminated
+         2x  Attacker-blocker match (lane 2, value 7) — lane eliminated
+         1x  Attacker-blocker match (lane 2, value 6) — lane eliminated
+         1x  Attacker-blocker match (lane 2, value 1) — lane eliminated
+         1x  Attacker-blocker match (lane 2, value 4) — lane eliminated
+────────────────────────────────────────

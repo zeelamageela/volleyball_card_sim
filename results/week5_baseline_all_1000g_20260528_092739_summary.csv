@@ -1,0 +1,2 @@
+seed,matrix_csv,validation_txt,validator_exit
+42,results\week5_baseline_all_1000g_seed42_20260528_092739.csv,results\week5_baseline_all_1000g_seed42_20260528_092739.validation.txt,1

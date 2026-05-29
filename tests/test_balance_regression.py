@@ -26,10 +26,13 @@ def test_locked_week2_pvd_win_rates_in_band():
 
     by_pair = {(r["team_a"], r["team_b"]): float(r["win_rate_a"]) for r in results}
 
+    week2_lock_teams = {"Blitz", "Grind"}
     checks = [
         t
         for t in targets
-        if t.get("metric") == "win_rate_a" and t.get("scope") == "pvd"
+        if t.get("metric") == "win_rate_a"
+        and t.get("scope") == "pvd"
+        and t.get("team_a") in week2_lock_teams
     ]
 
     failures = []

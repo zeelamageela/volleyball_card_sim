@@ -1,0 +1,76 @@
+COMMAND:
+C:\Users\zackl\Documents\volleyball_card_sim\.venv\Scripts\python.exe validate_balance_targets.py --results results\week7_kickoff_all_2000g_seed2718_20260528_132301.csv --targets data\balance_targets.csv
+
+STDOUT:
+Balance Target Validation
+================================================================================
+FAIL | win_rate_a         | pvp  | Blitz vs Grind         | observed=60.600     target=[45.000, 55.000]
+FAIL | win_rate_a         | pvp  | Grind vs Blitz         | observed=38.850     target=[45.000, 55.000]
+PASS | win_rate_a         | pvp  | Spread vs Backline     | observed=45.300     target=[45.000, 55.000]
+FAIL | win_rate_a         | pvp  | Backline vs Spread     | observed=55.550     target=[45.000, 55.000]
+PASS | win_rate_a         | pvd  | Blitz vs Easy          | observed=73.150     target=[70.000, 80.000]
+PASS | win_rate_a         | pvd  | Blitz vs Medium        | observed=61.750     target=[52.000, 62.000]
+PASS | win_rate_a         | pvd  | Blitz vs Hard          | observed=26.500     target=[25.000, 35.000]
+PASS | win_rate_a         | pvd  | Grind vs Easy          | observed=75.350     target=[70.000, 80.000]
+PASS | win_rate_a         | pvd  | Grind vs Medium        | observed=54.000     target=[52.000, 62.000]
+FAIL | win_rate_a         | pvd  | Grind vs Hard          | observed=36.800     target=[25.000, 35.000]
+FAIL | win_rate_a         | pvd  | Spread vs Easy         | observed=81.600     target=[70.000, 80.000]
+FAIL | win_rate_a         | pvd  | Spread vs Medium       | observed=48.850     target=[52.000, 62.000]
+PASS | win_rate_a         | pvd  | Spread vs Hard         | observed=34.750     target=[25.000, 35.000]
+FAIL | win_rate_a         | pvd  | Backline vs Easy       | observed=80.950     target=[70.000, 80.000]
+PASS | win_rate_a         | pvd  | Backline vs Medium     | observed=54.450     target=[52.000, 62.000]
+FAIL | win_rate_a         | pvd  | Backline vs Hard       | observed=35.950     target=[25.000, 35.000]
+PASS | avg_exchanges      | pvp  | Blitz vs Grind         | observed=2.840      target=[1.800, 3.500]
+FAIL | avg_exchanges      | pvd  | Blitz vs Easy          | observed=1.760      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Blitz vs Medium        | observed=3.102      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Blitz vs Hard          | observed=2.243      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Blitz vs Spread        | observed=2.940      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Blitz vs Backline      | observed=2.652      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Grind vs Blitz         | observed=2.822      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Grind vs Easy          | observed=1.839      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Grind vs Medium        | observed=3.226      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Grind vs Hard          | observed=2.397      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Grind vs Spread        | observed=3.203      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Grind vs Backline      | observed=2.870      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Spread vs Blitz        | observed=2.918      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Spread vs Grind        | observed=3.198      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Spread vs Easy         | observed=1.848      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Spread vs Medium       | observed=3.231      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Spread vs Hard         | observed=2.407      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Spread vs Backline     | observed=2.950      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Backline vs Blitz      | observed=2.643      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Backline vs Grind      | observed=2.879      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Backline vs Easy       | observed=1.849      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Backline vs Medium     | observed=3.184      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Backline vs Hard       | observed=2.314      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Backline vs Spread     | observed=2.946      target=[1.800, 3.500]
+PASS | top_endings_share  | pvp  | Blitz vs Grind         | observed=39.023     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Blitz vs Easy          | observed=22.042     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Blitz vs Medium        | observed=41.587     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Blitz vs Hard          | observed=20.215     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Blitz vs Spread        | observed=37.123     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Blitz vs Backline      | observed=39.868     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Grind vs Blitz         | observed=39.323     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Grind vs Easy          | observed=22.975     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Grind vs Medium        | observed=43.667     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Grind vs Hard          | observed=22.110     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Grind vs Spread        | observed=40.598     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Grind vs Backline      | observed=43.714     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Spread vs Blitz        | observed=36.690     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Spread vs Grind        | observed=40.663     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Spread vs Easy         | observed=23.892     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Spread vs Medium       | observed=43.767     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Spread vs Hard         | observed=22.121     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Spread vs Backline     | observed=41.827     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Backline vs Blitz      | observed=39.633     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Backline vs Grind      | observed=43.501     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Backline vs Easy       | observed=23.383     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Backline vs Medium     | observed=43.323     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Backline vs Hard       | observed=22.041     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Backline vs Spread     | observed=41.824     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+--------------------------------------------------------------------------------
+Summary: PASS=55 FAIL=9 SKIP=0
+
+STDERR:
+
+EXIT_CODE: 1

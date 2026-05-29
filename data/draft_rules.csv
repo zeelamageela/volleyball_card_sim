@@ -1,0 +1,3 @@
+rule_set,description,pool_size,bans_per_team,pick_order,picks_per_team,max_same_role,allow_duplicate_player_name,enforce_role_coverage,notes
+s2_alpha_snake_24,24-card pool with snake draft and 1 ban each,24,1,snake,6,2,false,true,Baseline playtest rules for Season 2 draft experiments
+s2_alpha_alternate_24,24-card pool with alternating draft and no bans,24,0,alternating,6,2,false,true,Faster variant for short sessions

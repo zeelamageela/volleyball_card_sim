@@ -6,7 +6,7 @@ This file is a short engine behavior guide.
 
 Authoritative sources:
 - Runtime behavior: `src/game.py`, `src/players.py`, `src/strategies.py`
-- Editable data source-of-truth docs: `data/set_templates.csv`, `data/teams.csv`, `data/team_passives.csv`, `data/deck_types.csv`
+- Editable data source-of-truth docs: `data/player_cards.csv`, `data/set_templates.csv`, `data/teams.csv`, `data/team_passives.csv`, `data/deck_types.csv`
 
 If docs and engine disagree, engine wins.
 
@@ -33,18 +33,21 @@ Broken play (`BROKEN_PLAY_TEMPLATES`):
 
 ## Matching behavior
 
+- Matching resolves before final lane choice and before numeric attack/block outcomes.
 - Blocker-blocker same value in one lane:
   blockers neutralize, lane becomes unblocked (0 block value), rally continues.
 - Attacker-attacker same value in one lane:
   lane eliminated, defender credited for that elimination result.
 - Single-attacker attacker-blocker same value:
-  lane eliminated.
+  lane eliminated. This is a match, not a touched-block deflect.
 - Multi-attacker attacker-blocker matches:
   matched cards are removed; lane can remain active if unmatched attacker cards remain.
 - Lanes are processed high-to-low by attack value.
 - If all attack lanes are eliminated, rally ends using the final elimination result.
 
 ## Attack resolution (`resolve_attack`)
+
+Applies only on a chosen lane that survived matching.
 
 - If attack > block: `KILL`
 - Else let diff = block - attack:
@@ -54,6 +57,13 @@ Broken play (`BROKEN_PLAY_TEMPLATES`):
 Deflect side:
 - diff 0-2: deflect to defender side (defender digs)
 - diff 3-4: deflect to attacker side (attacker digs)
+
+## Tip behavior
+
+- Base tip threshold is `3` on normal front-row attacks.
+- Back-row attacks cannot tip.
+- Some setter abilities can raise the tip threshold for that exchange.
+- Tip digs and deflect digs do not use chase.
 
 ## Team passives in engine
 

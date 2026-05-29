@@ -1,0 +1,2 @@
+team_a,team_b,mode,games,seed,strategy_a,strategy_b,deck_type_a,deck_type_b,passive_a,passive_b,wins_a,wins_b,win_rate_a,win_rate_b,avg_rallies,avg_exchanges,top_endings
+Spread,Easy,pvd,1000,42,smart,dummy,standard,dummy,Lane Chess,Safe Setter,779,221,77.9,22.1,25.287,1.855,Stuffed:5950 | Tip not dug:4671 | Deflect not dug:2357

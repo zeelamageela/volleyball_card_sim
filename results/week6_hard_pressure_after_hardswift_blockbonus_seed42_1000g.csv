@@ -1,0 +1,5 @@
+team_a,team_b,mode,games,seed,strategy_a,strategy_b,deck_type_a,deck_type_b,passive_a,passive_b,wins_a,wins_b,win_rate_a,win_rate_b,avg_rallies,avg_exchanges,top_endings
+Blitz,Hard,pvd,1000,42,smart,dummy,standard,dummy,,Elite Draw,277,723,27.7,72.3,25.597,2.249,Deflect not dug:5213 | Tip not dug:5036 | Stuffed:4324
+Grind,Hard,pvd,1000,43,smart,dummy,standard,dummy,Deep Bench,Elite Draw,403,597,40.3,59.7,25.763,2.34,Stuffed:5365 | Deflect not dug:4979 | Tip not dug:4763
+Spread,Hard,pvd,1000,44,smart,dummy,standard,dummy,Lane Chess,Elite Draw,387,613,38.7,61.3,25.857,2.354,Tip not dug:5497 | Deflect not dug:5381 | Stuffed:4927
+Backline,Hard,pvd,1000,45,smart,dummy,standard,dummy,Transition Sniper,Elite Draw,385,615,38.5,61.5,25.619,2.33,Deflect not dug:5653 | Tip not dug:5215 | Stuffed:5029

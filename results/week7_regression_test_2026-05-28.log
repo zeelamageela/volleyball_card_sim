@@ -1,0 +1,9 @@
+Command: pytest tests/test_balance_regression.py -q
+Timestamp: 2026-05-28T14:35:54.1114031-04:00
+
+--- STDOUT/STDERR ---
+.                                                                        [100%]
+1 passed in 0.03s
+
+--- EXIT CODE ---
+0

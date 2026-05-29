@@ -783,7 +783,7 @@ _ROLE_MAP: Dict[str, str] = {
 def load_player_cards(path: Path) -> Dict[str, PlayerCard]:
     """
     Load all player-ability definitions from a CSV.
-    Returns {player_name: PlayerCard}.
+    Returns a mapping of player definitions.
 
     Required columns:
       player_name, role, ability_name, trigger, condition_field,
@@ -795,22 +795,48 @@ def load_player_cards(path: Path) -> Dict[str, PlayerCard]:
     A player may appear on multiple rows — one row per ability.
     To define a player with no abilities, include a single row and leave
     ability_name blank.
+
+    Duplicate display names across roles are supported. When a name appears
+    on multiple roles, rows are stored under role-aware keys of the form
+    "Name::ROLE" and the first occurrence also keeps the legacy plain-name key.
     """
     cards: Dict[str, PlayerCard] = {}
     with open(path, newline="", encoding="utf-8-sig") as f:
-        for row in csv.DictReader(f):
+        rows = list(csv.DictReader(f))
+
+    name_roles: Dict[str, set[str]] = {}
+    for row in rows:
+        name = row["player_name"].strip()
+        if not name:
+            continue
+        role_str = row["role"].strip()
+        role_key = _ROLE_MAP.get(role_str.lower(), role_str.upper())
+        name_roles.setdefault(name, set()).add(role_key)
+
+    ambiguous_names = {
+        name for name, roles in name_roles.items()
+        if len(roles) > 1
+    }
+
+    for row in rows:
             name = row["player_name"].strip()
             if not name:
                 continue
-            if name not in cards:
-                cards[name] = PlayerCard(
+            role_str = row["role"].strip()
+            role_key = _ROLE_MAP.get(role_str.lower(), role_str.upper())
+            lookup_key = f"{name}::{role_key}" if name in ambiguous_names else name
+
+            if lookup_key not in cards:
+                cards[lookup_key] = PlayerCard(
                     player_name=name,
-                    role_name=row["role"].strip(),
+                    role_name=role_str,
                 )
+                if name in ambiguous_names and name not in cards:
+                    cards[name] = cards[lookup_key]
             ability_name = row.get("ability_name", "").strip()
             if not ability_name:
                 continue  # plain player, no ability on this row
-            cards[name].abilities.append(Ability(
+            cards[lookup_key].abilities.append(Ability(
                 ability_name    = ability_name,
                 trigger         = row["trigger"].strip(),
                 condition_field = row.get("condition_field", "").strip(),
@@ -856,8 +882,10 @@ def load_roster(
                     f"Unknown role '{role_str}' for player '{name}' "
                     f"in {roster_path}"
                 )
-            card = player_cards.get(
-                name, PlayerCard(player_name=name, role_name=role_str)
+            card = (
+                player_cards.get(f"{name}::{role_key}")
+                or player_cards.get(name)
+                or PlayerCard(player_name=name, role_name=role_str)
             )
             roster[role] = card
     return roster

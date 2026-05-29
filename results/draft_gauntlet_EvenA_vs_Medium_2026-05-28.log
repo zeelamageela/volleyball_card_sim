@@ -1,0 +1,85 @@
+Team A abilities loaded from data\team_draft_even_a.csv
+Team B abilities loaded from data\team_dummy_medium.csv
+
+Running 2,000 games  (smart vs dummy)...
+
+────────────────────────────────────────
+  Games played        : 2000
+  EvenA               :  1026 wins  (51.3%)
+  Medium              :   974 wins  (48.7%)
+  Avg rallies/game   : 25.2
+  Avg exchanges/rally: 3.20
+────────────────────────────────────────
+  Point-Scoring Efficiency (per rally):
+    EvenA                  25650 scored /  24839 lost   PSE +1.6%   eff ratio 1.03x
+      Hit kills                :   1369  (5.3%)
+      Tip kills                :   6080  (23.7%)
+      Aces                     :    603  (2.4%)
+      Stuffs                   :   6498  (25.3%)
+      Deflections              :   6854  (26.7%)
+      Opp. errors              :      5  (0.0%)
+      Other                    :   4241  (16.5%)
+    Medium                 24839 scored /  25650 lost   PSE -1.6%   eff ratio 0.97x
+      Hit kills                :   3103  (12.5%)
+      Tip kills                :  15582  (62.7%)
+      Aces                     :      4  (0.0%)
+      Stuffs                   :   4307  (17.3%)
+      Deflections              :    268  (1.1%)
+      Opp. errors              :      2  (0.0%)
+      Other                    :   1573  (6.3%)
+────────────────────────────────────────
+  Rally endings (all types):
+     21629x  Tip not dug
+     10805x  Stuffed
+      7122x  Deflect not dug
+      2601x  Kill (dig failed)
+      1871x  Kill (chase failed)
+      1424x  Attacker-blocker match (lane 1, value 7) — lane eliminated
+      1251x  Attacker-blocker match (lane 1, value 8) — lane eliminated
+       622x  Attacker-blocker match (lane 1, value 9) — lane eliminated
+       610x  Attacker-blocker match (lane 1, value 6) — lane eliminated
+       607x  Serve ace (chase failed)
+       518x  Attacker-blocker match (lane 1, value 5) — lane eliminated
+       443x  Attacker-blocker match (lane 1, value 4) — lane eliminated
+       127x  Attacker-blocker match (lane 1, value 3) — lane eliminated
+       118x  Attacker-blocker match (lane 1, value 10) — lane eliminated
+       114x  Attacker-blocker match (lane 3, value 8) — lane eliminated
+       106x  Attacker-blocker match (lane 3, value 7) — lane eliminated
+        78x  Attacker-blocker match (lane 1, value 2) — lane eliminated
+        56x  Attacker-blocker match (lane 3, value 4) — lane eliminated
+        54x  Attacker-blocker match (lane 3, value 9) — lane eliminated
+        50x  Attacker-blocker match (lane 3, value 6) — lane eliminated
+        41x  Attacker-blocker match (lane 3, value 5) — lane eliminated
+        30x  Attacker-blocker match (lane 1, value 1) — lane eliminated
+        28x  Attacker-blocker match (lane 3, value 2) — lane eliminated
+        23x  Attacker-blocker match (lane 2, value 4) — lane eliminated
+        22x  Attacker-blocker match (lane 3, value 3) — lane eliminated
+        17x  Attacker-blocker match (lane 2, value 2) — lane eliminated
+        17x  Attacker-blocker match (lane 2, value 5) — lane eliminated
+        16x  Attacker-blocker match (lane 2, value 3) — lane eliminated
+        13x  Attacker-blocker match (lane 3, value 1) — lane eliminated
+        10x  Seam shot deflect (attack=13, block=13)
+         9x  Attacker-blocker match (lane 2, value 6) — lane eliminated
+         9x  Attacker-blocker match (lane 2, value 7) — lane eliminated
+         7x  Attacker-blocker match (lane 2, value 1) — lane eliminated
+         6x  Seam shot deflect (attack=14, block=14)
+         6x  Attacker-blocker match (lane 3, value 10) — lane eliminated
+         5x  Attacker-blocker match (lane 2, value 8) — lane eliminated
+         4x  Seam shot deflect (attack=14, block=17)
+         3x  Seam shot deflect (attack=15, block=15)
+         2x  Front+back attackers match (lane 1, value 7) - offensive confusion
+         2x  Seam shot deflect (attack=13, block=15)
+         1x  Seam shot deflect (attack=14, block=18)
+         1x  Seam shot deflect (attack=13, block=14)
+         1x  Front+back attackers match (lane 2, value 2) - offensive confusion
+         1x  Seam shot deflect (attack=14, block=15)
+         1x  Seam shot deflect (attack=13, block=17)
+         1x  Seam shot deflect (attack=14, block=16)
+         1x  Front+back attackers match (lane 1, value 5) - offensive confusion
+         1x  Seam shot deflect (attack=15, block=16)
+         1x  Seam shot deflect (attack=13, block=16)
+         1x  Front+back attackers match (lane 2, value 3) - offensive confusion
+         1x  Front+back attackers match (lane 2, value 1) - offensive confusion
+         1x  Front+back attackers match (lane 3, value 2) - offensive confusion
+         1x  Seam shot deflect (attack=15, block=17)
+────────────────────────────────────────

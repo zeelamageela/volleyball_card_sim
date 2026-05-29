@@ -1,0 +1,34 @@
+COMMAND:
+c:\Users\zackl\Documents\volleyball_card_sim\.venv\Scripts\python.exe balance_matrix.py --mode all --games 2000 --seed 42 --output results\week7_kickoff_all_2000g_seed42_20260528_130943.csv
+
+STDOUT:
+   Blitz vs Grind    ->  60.95% /  39.05%
+   Blitz vs Easy     ->  72.90% /  27.10%
+   Blitz vs Medium   ->  62.10% /  37.90%
+   Blitz vs Hard     ->  28.95% /  71.05%
+   Blitz vs Spread   ->  50.20% /  49.80%
+   Blitz vs Backline ->  44.15% /  55.85%
+   Grind vs Blitz    ->  39.20% /  60.80%
+   Grind vs Easy     ->  77.45% /  22.55%
+   Grind vs Medium   ->  52.65% /  47.35%
+   Grind vs Hard     ->  35.75% /  64.25%
+   Grind vs Spread   ->  41.95% /  58.05%
+   Grind vs Backline ->  32.45% /  67.55%
+  Spread vs Blitz    ->  50.10% /  49.90%
+  Spread vs Grind    ->  61.65% /  38.35%
+  Spread vs Easy     ->  79.45% /  20.55%
+  Spread vs Medium   ->  49.85% /  50.15%
+  Spread vs Hard     ->  33.15% /  66.85%
+  Spread vs Backline ->  45.30% /  54.70%
+Backline vs Blitz    ->  54.35% /  45.65%
+Backline vs Grind    ->  68.25% /  31.75%
+Backline vs Easy     ->  81.45% /  18.55%
+Backline vs Medium   ->  54.65% /  45.35%
+Backline vs Hard     ->  34.50% /  65.50%
+Backline vs Spread   ->  55.70% /  44.30%
+
+Saved 24 matchup rows to results\week7_kickoff_all_2000g_seed42_20260528_130943.csv
+
+STDERR:
+
+EXIT_CODE: 0

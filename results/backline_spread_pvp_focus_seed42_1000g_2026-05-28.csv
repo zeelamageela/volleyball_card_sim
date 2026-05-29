@@ -1,0 +1,3 @@
+team_a,team_b,mode,games,seed,strategy_a,strategy_b,deck_type_a,deck_type_b,passive_a,passive_b,wins_a,wins_b,win_rate_a,win_rate_b,avg_rallies,avg_exchanges,top_endings
+Spread,Backline,pvp,1000,42,smart,smart,standard,standard,Lane Chess,Transition Sniper,495,505,49.5,50.5,25.39,2.9,Stuffed:10341 | Deflect not dug:4581 | Tip not dug:3529
+Backline,Spread,pvp,1000,43,smart,smart,standard,standard,Transition Sniper,Lane Chess,509,491,50.9,49.1,25.413,2.909,Stuffed:10243 | Deflect not dug:4658 | Tip not dug:3627

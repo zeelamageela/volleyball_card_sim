@@ -1,0 +1,25 @@
+team_a,team_b,mode,games,seed,strategy_a,strategy_b,deck_type_a,deck_type_b,passive_a,passive_b,wins_a,wins_b,win_rate_a,win_rate_b,avg_rallies,avg_exchanges,top_endings
+Blitz,Grind,pvp,2000,2718,smart,smart,standard,standard,,No Passive,1212,788,60.6,39.4,25.226,2.84,Stuffed:19688 | Deflect not dug:7422 | Tip not dug:7129
+Blitz,Easy,pvd,2000,2719,smart,dummy,standard,dummy,,Safe Setter,1463,537,73.15,26.85,25.61,1.76,Stuffed:11290 | Tip not dug:8357 | Deflect not dug:4451
+Blitz,Medium,pvd,2000,2720,smart,dummy,standard,dummy,,Back Court Threat,1235,765,61.75,38.25,25.276,3.102,Tip not dug:21023 | Stuffed:9906 | Deflect not dug:6730
+Blitz,Hard,pvd,2000,2721,smart,dummy,standard,dummy,,Elite Draw,530,1470,26.5,73.5,25.572,2.243,Deflect not dug:10339 | Tip not dug:10120 | Stuffed:8737
+Blitz,Spread,pvp,2000,2722,smart,smart,standard,standard,,Lane Chess,971,1029,48.55,51.45,25.414,2.94,Stuffed:18869 | Deflect not dug:7808 | Tip not dug:7364
+Blitz,Backline,pvp,2000,2723,smart,smart,standard,standard,,Transition Sniper,898,1102,44.9,55.1,25.36,2.652,Stuffed:20221 | Deflect not dug:8394 | Tip not dug:6675
+Grind,Blitz,pvp,2000,2724,smart,smart,standard,standard,No Passive,,777,1223,38.85,61.15,25.372,2.822,Stuffed:19954 | Deflect not dug:7471 | Tip not dug:7177
+Grind,Easy,pvd,2000,2725,smart,dummy,standard,dummy,No Passive,Safe Setter,1507,493,75.35,24.65,25.465,1.839,Stuffed:11701 | Tip not dug:8535 | Deflect not dug:4714
+Grind,Medium,pvd,2000,2726,smart,dummy,standard,dummy,No Passive,Back Court Threat,1080,920,54.0,46.0,25.273,3.226,Tip not dug:22072 | Stuffed:10946 | Deflect not dug:7202
+Grind,Hard,pvd,2000,2727,smart,dummy,standard,dummy,No Passive,Elite Draw,736,1264,36.8,63.2,25.683,2.397,Deflect not dug:11357 | Tip not dug:11293 | Stuffed:9631
+Grind,Spread,pvp,2000,2728,smart,smart,standard,standard,No Passive,Lane Chess,765,1235,38.25,61.75,25.265,3.203,Stuffed:20514 | Deflect not dug:8637 | Tip not dug:7803
+Grind,Backline,pvp,2000,2729,smart,smart,standard,standard,No Passive,Transition Sniper,655,1345,32.75,67.25,24.904,2.87,Stuffed:21773 | Deflect not dug:9207 | Tip not dug:6958
+Spread,Blitz,pvp,2000,2730,smart,smart,standard,standard,Lane Chess,,977,1023,48.85,51.15,25.357,2.918,Stuffed:18607 | Deflect not dug:7745 | Tip not dug:7399
+Spread,Grind,pvp,2000,2731,smart,smart,standard,standard,Lane Chess,No Passive,1187,813,59.35,40.65,25.25,3.198,Stuffed:20535 | Deflect not dug:8638 | Tip not dug:7729
+Spread,Easy,pvd,2000,2732,smart,dummy,standard,dummy,Lane Chess,Safe Setter,1632,368,81.6,18.4,25.107,1.848,Stuffed:11997 | Tip not dug:8842 | Deflect not dug:4765
+Spread,Medium,pvd,2000,2733,smart,dummy,standard,dummy,Lane Chess,Back Court Threat,977,1023,48.85,51.15,25.333,3.231,Tip not dug:22175 | Stuffed:11078 | Deflect not dug:7142
+Spread,Hard,pvd,2000,2734,smart,dummy,standard,dummy,Lane Chess,Elite Draw,695,1305,34.75,65.25,25.765,2.407,Tip not dug:11399 | Deflect not dug:11074 | Stuffed:9835
+Spread,Backline,pvp,2000,2735,smart,smart,standard,standard,Lane Chess,Transition Sniper,906,1094,45.3,54.7,25.18,2.95,Stuffed:21064 | Deflect not dug:9774 | Tip not dug:6927
+Backline,Blitz,pvp,2000,2736,smart,smart,standard,standard,Transition Sniper,,1148,852,57.4,42.6,25.37,2.643,Stuffed:20110 | Deflect not dug:8438 | Tip not dug:6703
+Backline,Grind,pvp,2000,2737,smart,smart,standard,standard,Transition Sniper,No Passive,1355,645,67.75,32.25,24.98,2.879,Stuffed:21733 | Deflect not dug:9336 | Tip not dug:6896
+Backline,Easy,pvd,2000,2738,smart,dummy,standard,dummy,Transition Sniper,Safe Setter,1619,381,80.95,19.05,24.956,1.849,Stuffed:11671 | Tip not dug:9031 | Deflect not dug:4744
+Backline,Medium,pvd,2000,2739,smart,dummy,standard,dummy,Transition Sniper,Back Court Threat,1089,911,54.45,45.55,25.326,3.184,Tip not dug:21944 | Stuffed:10880 | Deflect not dug:7109
+Backline,Hard,pvd,2000,2740,smart,dummy,standard,dummy,Transition Sniper,Elite Draw,719,1281,35.95,64.05,25.77,2.314,Deflect not dug:11360 | Tip not dug:10413 | Stuffed:10238
+Backline,Spread,pvp,2000,2741,smart,smart,standard,standard,Transition Sniper,Lane Chess,1111,889,55.55,44.45,25.166,2.946,Stuffed:21051 | Deflect not dug:9527 | Tip not dug:7009

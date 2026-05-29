@@ -87,44 +87,65 @@ Primary file: SEASON1_WEEK3.md
 Waiver file: results/week3_waiver_2026-05-27.md
 
 ### Week 4: Ability curation pass
-Status: Not started
+Status: Completed
 
 Acceptance:
 
-- [ ] Live ability pool is coherent and explainable.
-- [ ] Redundant/experimental abilities parked as inactive.
+- [x] Live ability pool is coherent and explainable.
+- [x] Redundant/experimental abilities parked as inactive.
+
+Primary file: SEASON1_WEEK4.md
+Curation artifact: data/ability_effect_pool.csv
 
 ### Week 5: Content expansion sprint 1
-Status: Not started
+Status: Completed with approved temporary waiver
 
 Acceptance:
 
-- [ ] Add 1-2 teams using existing mechanics.
-- [ ] New teams near target ranges.
+- [x] Add 1-2 teams using existing mechanics.
+- [x] New teams near target ranges (with narrow approved waiver rows).
+
+Draft candidates selected and wired: Spread (Lane Chess) and Backline (Transition Sniper)
+Baseline artifact: results/week5_baseline_all_1000g_seed42_20260528_092739.csv
+Target sheet expanded to include Spread/Backline PvP and PvD bands; current Week 5 misses are explicit.
+Closeout artifact: results/season1_week5_microedit_focus_seed42_1000g_2026-05-28.csv
+Waiver file: results/week5_waiver_2026-05-28.md
 
 ### Week 6: Content expansion sprint 2
-Status: Not started
+Status: Completed with approved temporary exceptions
 
 Acceptance:
 
-- [ ] Reach minimum 6-team ecosystem.
-- [ ] No extreme out-of-band matchup without explicit reason.
+- [x] Reach minimum 6-team ecosystem.
+- [x] No extreme out-of-band matchup without explicit reason (explicit exceptions documented).
+
+Hard-pressure test artifact: results/week6_hard_pressure_seed42_1000g.csv
+PvP exception file: results/week6_pvp_exception_2026-05-28.md
+Waiver file: results/week6_waiver_2026-05-28.md
 
 ### Week 7: Stability and regression week
-Status: Not started
+Status: Completed with approved temporary stability exceptions
 
 Acceptance:
 
-- [ ] High-sample, multi-seed regressions controlled.
-- [ ] Results hold across seeds.
+- [x] High-sample, multi-seed regressions controlled.
+- [x] Results hold across seeds (with explicit approved exceptions).
+
+Stability exception file: results/week7_stability_exception_2026-05-28.md
+Regression log: results/week7_regression_test_2026-05-28.log
 
 ### Week 8: Season 1 lock and Season 2 readiness
-Status: Not started
+Status: Completed with approved lock exceptions
 
 Acceptance:
 
-- [ ] Season 1 freeze complete and documented.
-- [ ] Draft mode scope defined (not implemented).
+- [x] Season 1 freeze complete and documented.
+- [x] Draft mode scope defined (not implemented).
+
+Primary file: SEASON1_WEEK8.md
+Lock manifest: results/week8_lock_manifest_2026-05-28.csv
+Freeze decision: results/week8_freeze_decision_2026-05-28.md
+Season 2 scope stub: SEASON2_DRAFT_MODE_SCOPE.md
 
 ## Weekly ritual (operating loop)
 
@@ -142,15 +163,16 @@ Acceptance:
 
 ## Current active checkpoint
 
-You are currently at the end of Week 3 with an approved isolated waiver.
-Next actionable roadmap step is Week 4 (Ability curation pass).
+Season 1 lock is complete with approved documented exceptions.
+Next actionable roadmap step is Season 2 scope refinement and prioritized cleanup of accepted exceptions.
 
 ## Session handoff order
 
 When resuming in a new session, open files in this order:
 
 1. SEASON1_MASTER_PLAN.md
-2. SEASON1_WEEK3.md
+2. SEASON2_DRAFT_MODE_SCOPE.md
 3. SIMULATION_QUICK_GUIDE.md
 4. data/teams.csv
 5. data/set_templates.csv
+6. data/player_cards.csv

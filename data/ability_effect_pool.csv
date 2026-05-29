@@ -1,0 +1,33 @@
+effect_constant,effect,pool_status,rationale
+ATTACK_VALUE_BONUS,attack_value_bonus,live,Used by at least one current player card in data/player_cards.csv
+BLOCK_VALUE_BONUS,block_value_bonus,parked,Not used by current player card pool; keep parked in Season 1
+ADJACENT_BLOCK_BONUS,adjacent_block_bonus,live,Used by at least one current player card in data/player_cards.csv
+PIERCE_BLOCK,pierce_block,live,Used by at least one current player card in data/player_cards.csv
+SET_VALUE_DELTA,set_value_delta,parked,Not used by current player card pool; keep parked in Season 1
+SERVE_VALUE_BONUS,serve_value_bonus,parked,Not used by current player card pool; keep parked in Season 1
+CHASE_CARD_BONUS,chase_card_bonus,parked,Not used by current player card pool; keep parked in Season 1
+DEFLECT_DIG_THRESHOLD,deflect_dig_threshold,parked,Not used by current player card pool; keep parked in Season 1
+TIP_VALUE_BONUS,tip_value_bonus,parked,Not used by current player card pool; keep parked in Season 1
+TIP_DIG_THRESHOLD,tip_dig_threshold,parked,Not used by current player card pool; keep parked in Season 1
+SINGLE_BLOCK_ONLY,single_block_only,parked,Not used by current player card pool; keep parked in Season 1
+DIG_THRESHOLD,dig_threshold,live,Used by at least one current player card in data/player_cards.csv
+WIPE_BLOCK,wipe_block,parked,Not used by current player card pool; keep parked in Season 1
+NO_CHASE,no_chase,parked,Not used by current player card pool; keep parked in Season 1
+ROLL_SHOT,roll_shot,live,Used by at least one current player card in data/player_cards.csv
+HEAVY_SPIN,heavy_spin,live,Used by at least one current player card in data/player_cards.csv
+SEAM_SHOT,seam_shot,live,Used by at least one current player card in data/player_cards.csv
+TIP_THRESHOLD_DELTA,tip_threshold_delta,parked,Not used by current player card pool; keep parked in Season 1
+OVER_BLOCK_BONUS,over_block_bonus,parked,Not used by current player card pool; keep parked in Season 1
+HOLD_CARD,hold_card,parked,Not used by current player card pool; keep parked in Season 1
+HAND_PEEK,hand_peek,parked,Not used by current player card pool; keep parked in Season 1
+EXCHANGE_CARD,exchange_card,parked,Not used by current player card pool; keep parked in Season 1
+HAND_SIZE_MOD,hand_size_mod,parked,Not used by current player card pool; keep parked in Season 1
+SLIDE_LANES,slide_lanes,live,Used by at least one current player card in data/player_cards.csv
+BACK_ROW_PIERCE,back_row_pierce,live,Used by at least one current player card in data/player_cards.csv
+MIN_BLOCKER_ONLY,min_blocker_only,parked,Not used by current player card pool; keep parked in Season 1
+WILD_BLOCK,wild_block,parked,Not used by current player card pool; keep parked in Season 1
+FORCE_HIGH_BLOCK,force_high_block,parked,Not used by current player card pool; keep parked in Season 1
+DECK_SWAP_OPPONENT,deck_swap_opponent,parked,Not used by current player card pool; keep parked in Season 1
+WIDE_SPREAD_BONUS,wide_spread_bonus,parked,Not used by current player card pool; keep parked in Season 1
+DRAW_AND_ADD_BLOCK,draw_and_add_block,live,Used by at least one current player card in data/player_cards.csv
+SETTER_COVER,setter_cover,parked,Not used by current player card pool; keep parked in Season 1

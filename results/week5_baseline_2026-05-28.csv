@@ -1,0 +1,25 @@
+team_a,team_b,mode,games,seed,strategy_a,strategy_b,deck_type_a,deck_type_b,passive_a,passive_b,wins_a,wins_b,win_rate_a,win_rate_b,avg_rallies,avg_exchanges,top_endings
+Blitz,Grind,pvp,1000,42,smart,smart,standard,standard,,Deep Bench,269,731,26.9,73.1,25.025,2.553,Stuffed:10678 | Tip not dug:3624 | Deflect not dug:3203
+Blitz,Easy,pvd,1000,43,smart,dummy,standard,dummy,,Safe Setter,719,281,71.9,28.1,25.596,1.754,Stuffed:5597 | Tip not dug:4159 | Deflect not dug:2266
+Blitz,Medium,pvd,1000,44,smart,dummy,standard,dummy,,Back Court Threat,627,373,62.7,37.3,25.173,3.098,Tip not dug:10341 | Stuffed:4958 | Deflect not dug:3461
+Blitz,Hard,pvd,1000,45,smart,dummy,standard,dummy,,Elite Draw,277,723,27.7,72.3,25.524,2.233,Deflect not dug:5180 | Tip not dug:4986 | Stuffed:4315
+Blitz,Spread,pvp,1000,46,smart,smart,standard,standard,,Lane Chess,440,560,44.0,56.0,25.295,2.97,Stuffed:8884 | Deflect not dug:3849 | Tip not dug:3809
+Blitz,Backline,pvp,1000,47,smart,smart,standard,standard,,Transition Sniper,403,597,40.3,59.7,25.114,2.691,Stuffed:9912 | Deflect not dug:4218 | Tip not dug:3557
+Grind,Blitz,pvp,1000,48,smart,smart,standard,standard,Deep Bench,,723,277,72.3,27.7,25.017,2.546,Stuffed:10667 | Tip not dug:3650 | Deflect not dug:3189
+Grind,Easy,pvd,1000,49,smart,dummy,standard,dummy,Deep Bench,Safe Setter,906,94,90.6,9.4,24.262,1.964,Stuffed:6355 | Tip not dug:3822 | Deflect not dug:2021
+Grind,Medium,pvd,1000,50,smart,dummy,standard,dummy,Deep Bench,Back Court Threat,593,407,59.3,40.7,25.334,3.329,Tip not dug:10479 | Stuffed:5890 | Deflect not dug:3086
+Grind,Hard,pvd,1000,51,smart,dummy,standard,dummy,Deep Bench,Elite Draw,567,433,56.7,43.3,25.871,2.393,Stuffed:5620 | Tip not dug:5284 | Deflect not dug:5189
+Grind,Spread,pvp,1000,52,smart,smart,standard,standard,Deep Bench,Lane Chess,649,351,64.9,35.1,25.21,2.763,Stuffed:10238 | Tip not dug:4047 | Deflect not dug:3480
+Grind,Backline,pvp,1000,53,smart,smart,standard,standard,Deep Bench,Transition Sniper,656,344,65.6,34.4,25.059,2.648,Stuffed:11436 | Deflect not dug:4224 | Tip not dug:3619
+Spread,Blitz,pvp,1000,54,smart,smart,standard,standard,Lane Chess,,549,451,54.9,45.1,25.331,2.966,Stuffed:8836 | Deflect not dug:3873 | Tip not dug:3820
+Spread,Grind,pvp,1000,55,smart,smart,standard,standard,Lane Chess,Deep Bench,327,673,32.7,67.3,25.18,2.755,Stuffed:10406 | Tip not dug:4006 | Deflect not dug:3436
+Spread,Easy,pvd,1000,56,smart,dummy,standard,dummy,Lane Chess,Safe Setter,767,233,76.7,23.3,25.315,1.851,Stuffed:5936 | Tip not dug:4585 | Deflect not dug:2266
+Spread,Medium,pvd,1000,57,smart,dummy,standard,dummy,Lane Chess,Back Court Threat,531,469,53.1,46.9,25.138,3.201,Tip not dug:10967 | Stuffed:5658 | Deflect not dug:3093
+Spread,Hard,pvd,1000,58,smart,dummy,standard,dummy,Lane Chess,Elite Draw,411,589,41.1,58.9,25.883,2.301,Tip not dug:5563 | Stuffed:5112 | Deflect not dug:4609
+Spread,Backline,pvp,1000,59,smart,smart,standard,standard,Lane Chess,Transition Sniper,501,499,50.1,49.9,25.259,3.007,Stuffed:9800 | Deflect not dug:4799 | Tip not dug:3774
+Backline,Blitz,pvp,1000,60,smart,smart,standard,standard,Transition Sniper,,601,399,60.1,39.9,25.096,2.725,Stuffed:10024 | Deflect not dug:4096 | Tip not dug:3482
+Backline,Grind,pvp,1000,61,smart,smart,standard,standard,Transition Sniper,Deep Bench,329,671,32.9,67.1,24.952,2.639,Stuffed:11481 | Deflect not dug:4160 | Tip not dug:3595
+Backline,Easy,pvd,1000,62,smart,dummy,standard,dummy,Transition Sniper,Safe Setter,880,120,88.0,12.0,24.409,1.898,Stuffed:5929 | Tip not dug:4783 | Deflect not dug:2351
+Backline,Medium,pvd,1000,63,smart,dummy,standard,dummy,Transition Sniper,Back Court Threat,562,438,56.2,43.8,25.157,3.216,Tip not dug:10775 | Stuffed:5477 | Deflect not dug:3700
+Backline,Hard,pvd,1000,64,smart,dummy,standard,dummy,Transition Sniper,Elite Draw,448,552,44.8,55.2,25.876,2.363,Deflect not dug:5699 | Tip not dug:5598 | Stuffed:5278
+Backline,Spread,pvp,1000,65,smart,smart,standard,standard,Transition Sniper,Lane Chess,521,479,52.1,47.9,25.184,2.984,Stuffed:9860 | Deflect not dug:4578 | Tip not dug:3728

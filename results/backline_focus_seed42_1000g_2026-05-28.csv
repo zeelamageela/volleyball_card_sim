@@ -1,0 +1,4 @@
+team_a,team_b,mode,games,seed,strategy_a,strategy_b,deck_type_a,deck_type_b,passive_a,passive_b,wins_a,wins_b,win_rate_a,win_rate_b,avg_rallies,avg_exchanges,top_endings
+Backline,Easy,pvd,1000,42,smart,dummy,standard,dummy,Transition Sniper,Safe Setter,807,193,80.7,19.3,25.135,1.853,Stuffed:5844 | Tip not dug:4606 | Deflect not dug:2433
+Backline,Medium,pvd,1000,43,smart,dummy,standard,dummy,Transition Sniper,Back Court Threat,529,471,52.9,47.1,25.288,3.214,Tip not dug:11026 | Stuffed:5537 | Deflect not dug:3475
+Backline,Hard,pvd,1000,44,smart,dummy,standard,dummy,Transition Sniper,Elite Draw,370,630,37.0,63.0,25.69,2.308,Deflect not dug:5567 | Tip not dug:5252 | Stuffed:5036

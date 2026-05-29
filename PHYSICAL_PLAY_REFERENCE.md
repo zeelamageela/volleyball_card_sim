@@ -48,16 +48,23 @@ Dummy hand: [2, 4, 5, 7] → **2 even, 2 odd** → Tie
 
 ## Matching Rules
 
+Matching happens before you choose your final lane and before normal attack resolution.
+
 ### Attacker-Blocker Match:
 - When your attack card **equals** a block card value → **Lane eliminated**
 - You **cannot choose** that lane
 - Must pick from remaining lanes
+- This is a **match**, not a touched-block deflect
 - If **all lanes matched** → Dummy wins the rally
 
 ### Blocker-Blocker Match:
 - When dummy places **two identical cards** in same lane → Cards cancel
 - Lane becomes **unblocked** (0 block value)
 - Your attack proceeds against empty block
+
+### Attacker-Attacker Match:
+- If two of your attackers in the same lane have the same value → Lane eliminated
+- Defender wins that elimination result
 
 ### Example:
 **You arm:** Lane 1=7, Lane 2=4, Lane 3=3  
@@ -77,19 +84,34 @@ Dummy hand: [2, 4, 5, 7] → **2 even, 2 odd** → Tie
 | Result | Condition | Outcome |
 |--------|-----------|---------|
 | **KILL** | Attack > Block | Defender must dig |
-| **DEFLECT** | Block - Attack is 0 to 4 | Dig side depends on deflect strength |
-| **STUFFED** | Block - Attack is 5 or more | Defender scores immediately |
+| **DEFLECT** | Non-matching block is 0 to 4 over attack | Dig side depends on deflect strength |
+| **STUFFED** | Non-matching block is 5 or more over attack | Defender scores immediately |
 
 Deflect side split:
 - Block - Attack 0 to 2: ball deflects to defender side (defender digs)
 - Block - Attack 3 to 4: ball deflects to attacker side (attacker digs)
+
+Deflect dig target:
+- Use the **highest single block card** in the lane, not the full block total
+- Back-row deflections are +2 harder to dig
+- No chase after a deflect dig
+
+---
+
+## Tip Rules
+
+- Front-row normal attacks may tip when effective attack is **3 or less**
+- Back-row attacks cannot tip
+- Some setter abilities can raise the tip threshold for one exchange
+- Tips are dug like tips, not like full hits
+- No chase after a tip dig
 
 ---
 
 ## Dummy Other Decisions
 
 - **Attack lane:** First available lane
-- **Tip/Hit:** Always tips (if card ≤4)
+- **Tip/Hit:** Always tips if tip-eligible (normally card ≤3 on a front-row attack)
 - **Dig:** First card in hand
 - **Chase:** First card in hand
 - **Set:** First card in hand

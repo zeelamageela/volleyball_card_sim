@@ -1,0 +1,9 @@
+team_a,team_b,mode,games,seed,strategy_a,strategy_b,deck_type_a,deck_type_b,passive_a,passive_b,wins_a,wins_b,win_rate_a,win_rate_b,avg_rallies,avg_exchanges,top_endings
+Spread,Easy,pvd,1000,42,smart,dummy,standard,dummy,Lane Chess,Safe Setter,793,207,79.3,20.7,25.234,1.849,Stuffed:5929 | Tip not dug:4634 | Deflect not dug:2298
+Spread,Medium,pvd,1000,43,smart,dummy,standard,dummy,Lane Chess,Back Court Threat,570,430,57.0,43.0,25.254,3.189,Tip not dug:10798 | Stuffed:5538 | Deflect not dug:3466
+Spread,Hard,pvd,1000,44,smart,dummy,standard,dummy,Lane Chess,Elite Draw,400,600,40.0,60.0,25.867,2.302,Tip not dug:5562 | Stuffed:5183 | Deflect not dug:4792
+Spread,Backline,pvp,1000,45,smart,smart,standard,standard,Lane Chess,Transition Sniper,455,545,45.5,54.5,25.215,2.989,Stuffed:10185 | Deflect not dug:4521 | Tip not dug:3673
+Backline,Easy,pvd,1000,46,smart,dummy,standard,dummy,Transition Sniper,Safe Setter,887,113,88.7,11.3,24.422,1.901,Stuffed:5916 | Tip not dug:4763 | Deflect not dug:2434
+Backline,Medium,pvd,1000,47,smart,dummy,standard,dummy,Transition Sniper,Back Court Threat,585,415,58.5,41.5,25.34,3.203,Tip not dug:10916 | Stuffed:5548 | Deflect not dug:3629
+Backline,Hard,pvd,1000,48,smart,dummy,standard,dummy,Transition Sniper,Elite Draw,442,558,44.2,55.8,25.667,2.388,Deflect not dug:5764 | Tip not dug:5538 | Stuffed:5209
+Backline,Spread,pvp,1000,49,smart,smart,standard,standard,Transition Sniper,Lane Chess,546,454,54.6,45.4,25.189,2.946,Stuffed:10104 | Deflect not dug:4628 | Tip not dug:3596

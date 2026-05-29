@@ -1,0 +1,36 @@
+﻿Balance Target Validation
+================================================================================
+SKIP | win_rate_a         | pvp  | Blitz vs Grind         | observed=n/a        target=[45.000, 55.000] (missing matchup row)
+SKIP | win_rate_a         | pvp  | Grind vs Blitz         | observed=n/a        target=[45.000, 55.000] (missing matchup row)
+PASS | win_rate_a         | pvp  | Spread vs Backline     | observed=49.300     target=[45.000, 55.000]
+PASS | win_rate_a         | pvp  | Backline vs Spread     | observed=48.100     target=[45.000, 55.000]
+SKIP | win_rate_a         | pvd  | Blitz vs Easy          | observed=n/a        target=[70.000, 80.000] (missing matchup row)
+SKIP | win_rate_a         | pvd  | Blitz vs Medium        | observed=n/a        target=[52.000, 62.000] (missing matchup row)
+SKIP | win_rate_a         | pvd  | Blitz vs Hard          | observed=n/a        target=[25.000, 35.000] (missing matchup row)
+SKIP | win_rate_a         | pvd  | Grind vs Easy          | observed=n/a        target=[70.000, 80.000] (missing matchup row)
+SKIP | win_rate_a         | pvd  | Grind vs Medium        | observed=n/a        target=[52.000, 62.000] (missing matchup row)
+SKIP | win_rate_a         | pvd  | Grind vs Hard          | observed=n/a        target=[25.000, 35.000] (missing matchup row)
+FAIL | win_rate_a         | pvd  | Spread vs Easy         | observed=80.900     target=[70.000, 80.000]
+PASS | win_rate_a         | pvd  | Spread vs Medium       | observed=54.300     target=[52.000, 62.000]
+FAIL | win_rate_a         | pvd  | Spread vs Hard         | observed=38.700     target=[25.000, 35.000]
+PASS | win_rate_a         | pvd  | Backline vs Easy       | observed=78.400     target=[70.000, 80.000]
+PASS | win_rate_a         | pvd  | Backline vs Medium     | observed=56.700     target=[52.000, 62.000]
+FAIL | win_rate_a         | pvd  | Backline vs Hard       | observed=37.900     target=[25.000, 35.000]
+PASS | avg_exchanges      | pvd  | Spread vs Easy         | observed=1.846      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Spread vs Medium       | observed=3.187      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Spread vs Hard         | observed=2.345      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Spread vs Backline     | observed=2.859      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Backline vs Easy       | observed=1.851      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Backline vs Medium     | observed=3.206      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvd  | Backline vs Hard       | observed=2.323      target=[1.800, 3.500]
+PASS | avg_exchanges      | pvp  | Backline vs Spread     | observed=2.866      target=[1.800, 3.500]
+PASS | top_endings_share  | pvd  | Spread vs Easy         | observed=23.337     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Spread vs Medium       | observed=42.864     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Spread vs Hard         | observed=21.485     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Spread vs Backline     | observed=41.199     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Backline vs Easy       | observed=23.441     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Backline vs Medium     | observed=42.922     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvd  | Backline vs Hard       | observed=22.068     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+PASS | top_endings_share  | pvp  | Backline vs Spread     | observed=40.700     target=[0.000, 50.000] (estimated from top_endings + avg_rallies)
+--------------------------------------------------------------------------------
+Summary: PASS=21 FAIL=3 SKIP=8

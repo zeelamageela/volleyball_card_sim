@@ -7,11 +7,11 @@ Blitz,normal,Gap Step,10,MB/OPP,OH/MB,OPP,-,OH,MB,OPP,4
 Blitz,broken,Scramble A,1-3,OH,OH,—,—,—,—,—,1
 Blitz,broken,Scramble B,4-7,—,OH,—,OPP,—,MB,—,2
 Blitz,broken,Scramble C,8-10,—,OH,—,OPP,—,MB,—,2
-Grind,normal,Wall,1-3,OH/MB/OPP,OH,MB,OPP,—,—,—,3
-Grind,normal,Anchor,4-5,—,OH,MB,—,OH,MB,OPP,3
-Grind,normal,Clamp,6-7,—,—,MB,OPP,OH,MB,OPP,3
-Grind,normal,Grind,8-9,—,OH,—,OPP,OH,MB,OPP,4
-Grind,normal,Siege,10,MB,OH,MB,OPP,OH,MB,OPP,4
+Grind,normal,Quick Set,1-3,OH/MB/OPP,OH,MB,OPP,—,—,—,3
+Grind,normal,Strong Side,4-5,—,OH,MB,—,OH,MB,OPP,3
+Grind,normal,Weak Side,6-7,—,—,MB,OPP,OH,MB,OPP,3
+Grind,normal,High Outside,8-9,—,OH,—,OPP,OH,MB,OPP,4
+Grind,normal,Back X,10,MB/OPP,OH,OPP,MB,OH,MB,OPP,4
 Grind,broken,Reset A,1-3,OH/MB,OH,MB,—,—,MB,—,2
 Grind,broken,Reset B,4-7,—,OH,—,OPP,—,MB,—,2
 Grind,broken,Reset C,8-10,—,—,MB,OPP,—,MB,—,2
@@ -44,3 +44,19 @@ EasyLite,normal,Lite D,10,—,OH,—,OPP,—,—,OPP,2
 EasyLite,broken,Lite Panic A,1-4,OH,OH,—,—,—,—,—,1
 EasyLite,broken,Lite Panic B,5-7,—,OH,—,—,—,—,—,1
 EasyLite,broken,Lite Panic C,8-10,—,OH,—,OPP,—,—,—,2
+Spread,normal,Lane Weave A,1-3,OH/MB/OPP,OH,MB,OPP,—,—,—,2
+Spread,normal,Lane Weave B,4-5,OH/MB,OH,MB,—,OH,—,OPP,3
+Spread,normal,Lane Weave C,6-7,MB/OPP,—,MB,OPP,OH,—,OPP,3
+Spread,normal,Lane Weave D,8-9,OH/OPP,OH,—,OPP,OH,MB,OPP,4
+Spread,normal,Lane Weave E,10,OH/MB/OPP,OH,MB,OPP,OH,MB,OPP,4
+Spread,broken,Lane Reset A,1-3,OH/MB,OH,MB,—,—,MB,—,2
+Spread,broken,Lane Reset B,4-7,OH/OPP,OH,—,OPP,—,MB,—,2
+Spread,broken,Lane Reset C,8-10,MB/OPP,—,MB,OPP,—,MB,—,2
+Backline,normal,Deep Tempo A,1-3,OH/MB/OPP,OH,MB,OPP,OH,—,OPP,3
+Backline,normal,Deep Tempo B,4-5,OH/MB,OH,MB,—,OH,—,OPP,3
+Backline,normal,Deep Tempo C,6-7,MB/OPP,—,MB,OPP,OH,—,OPP,3
+Backline,normal,Deep Tempo D,8-9,OH/OPP,OH,—,OPP,OH,MB,OPP,4
+Backline,normal,Deep Tempo E,10,OH/MB/OPP,OH,MB,OPP,OH,MB,OPP,4
+Backline,broken,Transition A,1-3,OH/MB,OH,MB,—,—,MB,—,2
+Backline,broken,Transition B,4-7,OH/OPP,OH,—,OPP,—,MB,—,2
+Backline,broken,Transition C,8-10,MB/OPP,—,MB,OPP,—,MB,—,2

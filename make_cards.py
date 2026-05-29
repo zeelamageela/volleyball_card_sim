@@ -13,6 +13,7 @@ import json
 import os
 import argparse
 from collections import defaultdict
+from pathlib import Path
 from typing import Dict, Optional, List, Tuple
 
 from reportlab.lib.pagesizes import letter
@@ -23,8 +24,8 @@ from reportlab.platypus import Paragraph
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 
-# ── Team display names (file stem → label) ──────────────────────────────────
-ROSTER_MAP = {
+# ── Fallback team display names (file stem → label) ────────────────────────
+DEFAULT_ROSTER_MAP = {
     "team_blitz":        "Blitz",
     "team_grind":        "Grind",
     "team_dummy_easy":   "Easy",
@@ -39,6 +40,8 @@ TEAM_COLORS = {
     "Easy":    colors.HexColor("#EEEEEE"),  # very light grey
     "Medium":  colors.HexColor("#CCCCCC"),  # light grey
     "Hard":    colors.HexColor("#999999"),  # dark grey
+    "Spread":  colors.HexColor("#C8C8C8"),  # balanced grey
+    "Backline": colors.HexColor("#B0B0B0"), # slightly darker grey
     "Unknown": colors.HexColor("#E8E8E8"),  # neutral
 }
 
@@ -59,16 +62,40 @@ ROLE_LABEL = {
 }
 
 
+def load_roster_map(data_dir: str) -> Dict[str, str]:
+    """Return {roster_file_stem: team_name} from teams.csv, with fallbacks."""
+    teams_csv = Path(data_dir) / "teams.csv"
+    roster_map: Dict[str, str] = {}
+
+    if teams_csv.exists():
+        with open(teams_csv, newline="", encoding="utf-8-sig") as fh:
+            for row in csv.DictReader(fh):
+                team_name = (row.get("team_name") or "").strip()
+                roster_file = (row.get("roster_file") or "").strip()
+                if not team_name or not roster_file:
+                    continue
+                roster_map[Path(roster_file).stem] = team_name
+
+    for stem, display in DEFAULT_ROSTER_MAP.items():
+        roster_map.setdefault(stem, display)
+
+    return roster_map
+
+
 def load_team_assignments(data_dir: str):
     """Return {player_name: team_display_name} by reading all known roster CSVs."""
     assignments = {}
-    for stem, display in ROSTER_MAP.items():
+    for stem, display in load_roster_map(data_dir).items():
         path = os.path.join(data_dir, f"{stem}.csv")
         if os.path.exists(path):
             with open(path, newline="", encoding="utf-8") as fh:
                 for row in csv.DictReader(fh):
                     assignments[row["player_name"]] = display
     return assignments
+
+
+def player_card_key(player_name: str, role: str) -> str:
+    return f"{player_name}::{role}"
 
 
 def _as_bool(value: str, default: bool = True) -> bool:
@@ -214,6 +241,7 @@ def load_team_card_data(data_dir: str) -> Dict[str, dict]:
 
 def _stable_player_signature(card: dict) -> str:
     payload = {
+        "cache_key": card["cache_key"],
         "player_name": card["player_name"],
         "role": card["role"],
         "team": card["team"],
@@ -521,7 +549,7 @@ def draw_quick_set_reference(
     c: canvas.Canvas,
     x: float, y: float, w: float, h: float,
 ) -> None:
-    """Draw quick set mechanics reference card."""
+    """Draw printable matching rules reference card."""
     c.setLineWidth(1.8)
     c.setStrokeColor(colors.black)
     c.roundRect(x, y, w, h, radius=8, stroke=1, fill=0)
@@ -531,64 +559,53 @@ def draw_quick_set_reference(
     # Title
     c.setFont("Helvetica-Bold", 13)
     c.setFillColor(colors.black)
-    c.drawCentredString(x + w / 2, cur_y, "QUICK SET RULES")
+    c.drawCentredString(x + w / 2, cur_y, "MATCHING")
     cur_y -= 10
 
     c.setFont("Helvetica", 7)
-    c.drawCentredString(x + w / 2, cur_y, "Set card 1-3 only")
+    c.drawCentredString(x + w / 2, cur_y, "Resolves before lane choice")
     cur_y -= 10
 
     c.setLineWidth(0.8)
     c.line(x + 8, cur_y, x + w - 8, cur_y)
     cur_y -= 13
 
-    # Quick lanes
+    # Matching sequence
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "Quick Lanes:")
+    c.drawString(x + 10, cur_y, "Core Rules:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• Lane 1 (OH)")
+    c.drawString(x + 12, cur_y, "• Exact attacker=blocker: lane out")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Lane 2 (MB)")
+    c.drawString(x + 12, cur_y, "• All lanes out: defender wins")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Lane 3 (OPP)")
+    c.drawString(x + 12, cur_y, "• Matching resolves before touch rules")
     cur_y -= 14
 
-    # Single blocker rule
+    # Other matches
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "Single Blocker Rule:")
+    c.drawString(x + 10, cur_y, "Other Matches:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• Only 1 blocker per quick lane")
+    c.drawString(x + 12, cur_y, "• Two equal blockers: block cancels")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Must blind draw from deck")
+    c.drawString(x + 12, cur_y, "• Two equal attackers: lane out")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Cannot choose from hand")
+    c.drawString(x + 12, cur_y, "• Multi-attacker matches remove only")
     cur_y -= 14
 
-    # No chase rule
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "No Chase Rule:")
+    c.drawString(x + 10, cur_y, "Reminder:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• Failed quick set dig = point")
-    cur_y -= 9
-    c.drawString(x + 12, cur_y, "• No chase attempt allowed")
-    cur_y -= 14
-
-    # Advantage
-    c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "Tactical Advantage:")
-    cur_y -= 10
-    c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "Efficient, high-pressure option")
+    c.drawString(x + 12, cur_y, "• Equality is a match, not a deflect")
 
 
 def draw_attack_types_reference(
     c: canvas.Canvas,
     x: float, y: float, w: float, h: float,
 ) -> None:
-    """Draw attack types and chase rules reference card."""
+    """Draw printable block touch outcomes reference card."""
     c.setLineWidth(1.8)
     c.setStrokeColor(colors.black)
     c.roundRect(x, y, w, h, radius=8, stroke=1, fill=0)
@@ -598,68 +615,50 @@ def draw_attack_types_reference(
     # Title
     c.setFont("Helvetica-Bold", 13)
     c.setFillColor(colors.black)
-    c.drawCentredString(x + w / 2, cur_y, "ATTACK TYPES")
-    cur_y -= 17
+    c.drawCentredString(x + w / 2, cur_y, "BLOCK TOUCH")
+    cur_y -= 10
+
+    c.setFont("Helvetica", 7)
+    c.drawCentredString(x + w / 2, cur_y, "Only after matching survives")
+    cur_y -= 10
 
     c.setLineWidth(0.8)
     c.line(x + 8, cur_y, x + w - 8, cur_y)
     cur_y -= 13
 
-    # Hit
+    # Outcomes
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "HIT:")
+    c.drawString(x + 10, cur_y, "Outcomes:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• Standard power attack")
+    c.drawString(x + 12, cur_y, "• Attack > block: no-touch attack")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Chase allowed on failed dig")
+    c.drawString(x + 12, cur_y, "• (continues to normal dig flow)")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Block 0-2 over: DEFLECT defender side")
     cur_y -= 14
 
-    # Tip
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "TIP:")
+    c.drawString(x + 10, cur_y, "Deflect Split:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• Soft attack (card ≤ tip threshold)")
+    c.drawString(x + 12, cur_y, "• Block 3-4 over: DEFLECT attacker side")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• No chase on failed dig")
+    c.drawString(x + 12, cur_y, "• Block 5+ over: STUFF")
     cur_y -= 14
 
-    # Roll Shot
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "ROLL SHOT:")
+    c.drawString(x + 10, cur_y, "Reminder:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• Goes over block (block ignored)")
-    cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Dug like tip (uses tip threshold)")
-    cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Chase allowed on failed dig")
-    cur_y -= 14
-
-    # Heavy Spin
-    c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "HEAVY SPIN:")
-    cur_y -= 10
-    c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• Bypasses block (block ignored)")
-    cur_y -= 9
-    c.drawString(x + 12, cur_y, "• No chase on failed dig")
-    cur_y -= 14
-
-    # Seam Shot
-    c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "SEAM SHOT:")
-    cur_y -= 10
-    c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• Deflection = instant point")
+    c.drawString(x + 12, cur_y, "• Exact equality is not a deflect")
 
 
 def draw_blocking_reference(
     c: canvas.Canvas,
     x: float, y: float, w: float, h: float,
 ) -> None:
-    """Draw blocking rules reference card."""
+    """Draw printable tip and deflect rules reference card."""
     c.setLineWidth(1.8)
     c.setStrokeColor(colors.black)
     c.roundRect(x, y, w, h, radius=8, stroke=1, fill=0)
@@ -669,65 +668,51 @@ def draw_blocking_reference(
     # Title
     c.setFont("Helvetica-Bold", 13)
     c.setFillColor(colors.black)
-    c.drawCentredString(x + w / 2, cur_y, "BLOCKING RULES")
+    c.drawCentredString(x + w / 2, cur_y, "TIP + DEFLECT")
     cur_y -= 17
 
     c.setLineWidth(0.8)
     c.line(x + 8, cur_y, x + w - 8, cur_y)
     cur_y -= 13
 
-    # Attack resolution
+    # Tip rules
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "Attack Resolution:")
-    cur_y -= 10
-    c.setFont("Helvetica", 7)
-    c.drawString(x + 12, cur_y, "Differential = Attack - Block")
-    cur_y -= 12
-
-    c.drawString(x + 12, cur_y, "• ≤ -1: STUFFED (blocker wins)")
-    cur_y -= 9
-    c.drawString(x + 12, cur_y, "•  0-2: DEFLECT (blocker side)")
-    cur_y -= 9
-    c.drawString(x + 12, cur_y, "•  3-4: DEFLECT (attacker side)")
-    cur_y -= 9
-    c.drawString(x + 12, cur_y, "•  5+:  KILL (attack vs dig)")
-    cur_y -= 14
-
-    # Quick set blocking
-    c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "Quick Set Blocking:")
+    c.drawString(x + 10, cur_y, "Tip Rules:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• 1 blocker only (blind draw)")
+    c.drawString(x + 12, cur_y, "• Front-row normal attacks tip at 3 or less")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Cannot choose from hand")
+    c.drawString(x + 12, cur_y, "• Back-row attacks cannot tip")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• Setter abilities can raise threshold")
+    cur_y -= 9
+    c.drawString(x + 12, cur_y, "• No chase after a tip dig")
     cur_y -= 14
 
-    # Normal blocking
+    # Deflect rules
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "Normal Blocking:")
+    c.drawString(x + 10, cur_y, "Deflect Rules:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• Choose cards from hand")
+    c.drawString(x + 12, cur_y, "• Dig side depends on block margin")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Up to max blockers per lane")
+    c.drawString(x + 12, cur_y, "• Use highest single blocker in lane")
     cur_y -= 14
 
-    # Odd/Even logic
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "Attack Card Parity:")
+    c.drawString(x + 10, cur_y, "Extra Deflect Notes:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• ODD attack → block ODD cards")
+    c.drawString(x + 12, cur_y, "• Back-row deflects are +2 harder")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• EVEN attack → block EVEN cards")
+    c.drawString(x + 12, cur_y, "• No chase after a deflect dig")
 
 
 def draw_chase_reference(
     c: canvas.Canvas,
     x: float, y: float, w: float, h: float,
 ) -> None:
-    """Draw chase rules reference card."""
+    """Draw printable dummy blocking reference card."""
     c.setLineWidth(1.8)
     c.setStrokeColor(colors.black)
     c.roundRect(x, y, w, h, radius=8, stroke=1, fill=0)
@@ -737,53 +722,46 @@ def draw_chase_reference(
     # Title
     c.setFont("Helvetica-Bold", 13)
     c.setFillColor(colors.black)
-    c.drawCentredString(x + w / 2, cur_y, "CHASE RULES")
+    c.drawCentredString(x + w / 2, cur_y, "DUMMY BLOCKING")
     cur_y -= 17
 
     c.setLineWidth(0.8)
     c.line(x + 8, cur_y, x + w - 8, cur_y)
     cur_y -= 13
 
-    # When chase happens
+    # Lane count rules
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "Chase Triggered When:")
+    c.drawString(x + 10, cur_y, "Lane Count:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• Failed dig on HIT or ROLL SHOT")
+    c.drawString(x + 12, cur_y, "• 1 lane: stack all blockers there")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Not triggered on failed tip")
+    c.drawString(x + 12, cur_y, "• 2 lanes: parity decides double block")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Not triggered on quick sets")
-    cur_y -= 9
-    c.drawString(x + 12, cur_y, "• Not triggered on heavy spin")
     cur_y -= 14
 
-    # Two attempts
+    # Two-lane parity
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "Two Chase Attempts:")
+    c.drawString(x + 10, cur_y, "Two Lanes:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "1. Adjacent player chase")
+    c.drawString(x + 12, cur_y, "• Majority even: double rightmost")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "2. Setter/Libero chase")
+    c.drawString(x + 12, cur_y, "• Majority odd or tie: double leftmost")
     cur_y -= 14
 
-    # Chase outcomes
+    # Three lanes and defaults
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + 10, cur_y, "Chase Outcomes:")
+    c.drawString(x + 10, cur_y, "More Defaults:")
     cur_y -= 10
     c.setFont("Helvetica", 7.5)
-    c.drawString(x + 12, cur_y, "• ARMED: Dig ≥ target")
+    c.drawString(x + 12, cur_y, "• 3 lanes: first 3 cards, one per lane")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "   → Chase team attacks")
+    c.drawString(x + 12, cur_y, "• First available attack lane")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "• FREE BALL: Armed requirements")
+    c.drawString(x + 12, cur_y, "• Tip whenever tip-eligible")
     cur_y -= 9
-    c.drawString(x + 12, cur_y, "   not met → continue rally")
-    cur_y -= 9
-    c.drawString(x + 12, cur_y, "• FAILED: Total < target")
-    cur_y -= 9
-    c.drawString(x + 12, cur_y, "   → Attacker wins point")
+    c.drawString(x + 12, cur_y, "• First card for dig, chase, and set")
 
 
 def make_pdf(
@@ -823,7 +801,7 @@ def make_pdf(
 
     # ── Team template cards (one per team, appended after ability cards) ─────
     team_data = team_card_data or {}
-    team_order = [t for t in ROSTER_MAP.values() if (teams is None or t in teams) and t in team_data]
+    team_order = [t for t in team_data.keys() if teams is None or t in teams]
     total_ability = len(cards)
     for j, team_name in enumerate(team_order):
         i = total_ability + j
@@ -845,19 +823,18 @@ def make_pdf(
             team_data[team_name].get("passive_text"),
         )
 
-    # ── Reference cards (rules + deck makeup) ─────────────────────────────────
+    # ── Reference cards aligned to PRINTABLE_REFERENCE_CARDS.md ───────────────
     reference_cards = []
     if include_reference_cards:
         reference_cards = [
-            ("Quick Set Rules", draw_quick_set_reference),
-            ("Attack Types", draw_attack_types_reference),
-            ("Blocking Rules", draw_blocking_reference),
-            ("Chase Rules", draw_chase_reference),
-            ("Deck Makeup", draw_deck_reference),
+            ("Matching", draw_quick_set_reference),
+            ("Block Touch", draw_attack_types_reference),
+            ("Tip And Deflect", draw_blocking_reference),
+            ("Dummy Blocking", draw_chase_reference),
         ]
-    
+
     total_team_cards = len(team_order)
-    for j, (ref_name, draw_func) in enumerate(reference_cards):
+    for j, (_ref_name, draw_func) in enumerate(reference_cards):
         i = total_ability + total_team_cards + j
         slot = i % (COLS * ROWS)
         if slot == 0:
@@ -896,63 +873,71 @@ def main() -> None:
     )
     parser.add_argument(
         "--teams", nargs="*",
-        choices=list(ROSTER_MAP.values()),
         help="Only include cards for these teams (default: all)",
     )
     args = parser.parse_args()
 
+    roster_map = load_roster_map(args.data_dir)
     team_cards = load_team_card_data(args.data_dir)
 
     # First, load ALL players from roster files
-    players = defaultdict(lambda: {"role": None, "team": None, "abilities": []})
+    players = defaultdict(lambda: {"player_name": None, "role": None, "team": None, "abilities": []})
     
     # Load all players from rosters
-    for stem, display in ROSTER_MAP.items():
+    for stem, display in roster_map.items():
         if args.teams and display not in args.teams:
             continue
         path = os.path.join(args.data_dir, f"{stem}.csv")
         if os.path.exists(path):
             with open(path, newline="", encoding="utf-8") as fh:
                 for row in csv.DictReader(fh):
-                    player_name = row["player_name"]
-                    players[player_name]["role"] = row["role"]
-                    players[player_name]["team"] = display
-                    players[player_name]["print_card"] = True
+                    player_name = row["player_name"].strip()
+                    role = row["role"].strip()
+                    cache_key = player_card_key(player_name, role)
+                    players[cache_key]["player_name"] = player_name
+                    players[cache_key]["role"] = role
+                    players[cache_key]["team"] = display
+                    players[cache_key]["print_card"] = True
     
     # Then overlay abilities from player_cards.csv
-    with open(args.input, newline="", encoding="utf-8") as fh:
+    with open(args.input, newline="", encoding="utf-8-sig") as fh:
         for row in csv.DictReader(fh):
-            player_name = row["player_name"]
-            if player_name in players:
+            player_name = (row.get("player_name") or "").strip()
+            role = (row.get("role") or "").strip()
+            cache_key = player_card_key(player_name, role)
+            if cache_key in players:
                 if "print_card" in row and row.get("print_card", "").strip() != "":
-                    players[player_name]["print_card"] = _as_bool(row.get("print_card", ""), default=True)
+                    players[cache_key]["print_card"] = _as_bool(row.get("print_card", ""), default=True)
                 if "skip_print" in row and row.get("skip_print", "").strip() != "":
                     if _as_bool(row.get("skip_print", ""), default=False):
-                        players[player_name]["print_card"] = False
+                        players[cache_key]["print_card"] = False
 
                 ability_name = (row.get("ability_name") or "").strip()
                 if ability_name:
-                    players[player_name]["abilities"].append({
+                    players[cache_key]["abilities"].append({
                         "ability_name": ability_name,
                         "description": row.get("description", "").strip(),
                     })
     
     # Convert to list of cards (one per player)
     cards = []
-    for player_name, data in players.items():
+    for cache_key, data in players.items():
         if not data.get("print_card", True):
             continue
         cards.append({
-            "player_name": player_name,
+            "cache_key": cache_key,
+            "player_name": data["player_name"],
             "role": data["role"],
             "abilities": data["abilities"],
             "team": data["team"],
         })
 
-    player_sigs = {card["player_name"]: _stable_player_signature(card) for card in cards}
+    cards.sort(key=lambda card: (card["team"], card["role"], card["player_name"]))
+
+    player_sigs = {card["cache_key"]: _stable_player_signature(card) for card in cards}
     team_sigs = {name: _stable_team_signature(name, info) for name, info in team_cards.items()}
 
-    selected_teams = [t for t in ROSTER_MAP.values() if args.teams is None or t in args.teams]
+    selected_teams = [t for t in roster_map.values() if args.teams is None or t in args.teams]
     selected_team_data = {t: team_cards[t] for t in selected_teams if t in team_cards}
 
     if args.changed_only:
@@ -962,7 +947,7 @@ def main() -> None:
 
         cards = [
             card for card in cards
-            if player_sigs.get(card["player_name"]) != old_player_sigs.get(card["player_name"])
+            if player_sigs.get(card["cache_key"]) != old_player_sigs.get(card["cache_key"])
         ]
         selected_team_data = {
             team_name: info
@@ -985,9 +970,13 @@ def main() -> None:
         include_reference_cards=not args.no_reference_cards,
     )
 
+    # Update cache after any successful generation so changed-only mode compares
+    # against the most recent print run (full or changed-only).
+    save_print_cache(args.cache_file, player_sigs, team_sigs)
     if args.changed_only:
-        save_print_cache(args.cache_file, player_sigs, team_sigs)
         print(f"Updated print cache: {args.cache_file}")
+    else:
+        print(f"Refreshed print baseline cache: {args.cache_file}")
 
 
 if __name__ == "__main__":

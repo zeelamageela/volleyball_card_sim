@@ -1,0 +1,13 @@
+category,path,status,notes
+config,data/teams.csv,locked,Runtime team mapping and deck/use_hand definitions
+config,data/set_templates.csv,locked,Set eligibility templates by team profile
+config,data/player_cards.csv,locked,Player ability definitions used in runtime
+config,data/team_passives.csv,locked,Team-level passive declarations
+config,data/deck_types.csv,locked,Deck composition definitions
+artifact,results/week7_kickoff_all_2000g_20260528_132301_summary.csv,accepted,Week 7 multi-seed stability summary
+artifact,results/week7_regression_test_2026-05-28.log,accepted,Regression guard execution log
+artifact,results/week7_stability_exception_2026-05-28.md,accepted_exception,Week 7 approved stability exceptions
+artifact,results/week6_pvp_exception_2026-05-28.md,accepted_exception,Week 6 approved PvP exception
+artifact,results/week6_waiver_2026-05-28.md,accepted_exception,Week 6 approved waiver details
+decision,results/week8_freeze_decision_2026-05-28.md,accepted,Week 8 freeze decision (Go with exceptions)
+future,SEASON2_DRAFT_MODE_SCOPE.md,defined_stub,Season 2 draft-mode scope stub (not implemented)

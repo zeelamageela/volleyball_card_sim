@@ -1,0 +1,2 @@
+team_a,team_b,mode,games,seed,strategy_a,strategy_b,deck_type_a,deck_type_b,passive_a,passive_b,wins_a,wins_b,win_rate_a,win_rate_b,avg_rallies,avg_exchanges,top_endings
+Spread,Medium,pvd,1000,42,smart,dummy,standard,dummy,Lane Chess,Back Court Threat,486,514,48.6,51.4,25.25,3.24,Tip not dug:11122 | Stuffed:5718 | Deflect not dug:3337

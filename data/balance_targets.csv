@@ -1,11 +1,19 @@
 metric,scope,team_a,team_b,min_value,max_value,notes
 win_rate_a,pvp,Blitz,Grind,45,55,Target a close competitive mirror between flagship player teams
 win_rate_a,pvp,Grind,Blitz,45,55,Reverse perspective of same PvP balance target
+win_rate_a,pvp,Spread,Backline,45,55,New Week 5 player-team mirror should be close and competitive
+win_rate_a,pvp,Backline,Spread,45,55,Reverse perspective of new Week 5 player-team mirror target
 win_rate_a,pvd,Blitz,Easy,70,80,Easy dummy should lose most games but still steal wins
 win_rate_a,pvd,Blitz,Medium,52,62,Medium should be competitive
 win_rate_a,pvd,Blitz,Hard,25,35,Hard should REALLY pressure player teams
 win_rate_a,pvd,Grind,Easy,70,80,Easy dummy should lose most games but still steal wins
 win_rate_a,pvd,Grind,Medium,52,62,Medium should be competitive
 win_rate_a,pvd,Grind,Hard,25,35,Hard should REALLY pressure player teams
+win_rate_a,pvd,Spread,Easy,70,80,Week 5 player team should beat Easy reliably without becoming trivial
+win_rate_a,pvd,Spread,Medium,52,62,Week 5 player team should be competitive with Medium
+win_rate_a,pvd,Spread,Hard,25,35,Week 5 player team should be pressured by Hard
+win_rate_a,pvd,Backline,Easy,70,80,Week 5 player team should beat Easy reliably without becoming trivial
+win_rate_a,pvd,Backline,Medium,52,62,Week 5 player team should be competitive with Medium
+win_rate_a,pvd,Backline,Hard,25,35,Week 5 player team should be pressured by Hard
 avg_exchanges,all,*,*,1.8,3.5,Keep rallies tactical without becoming overly grindy
 top_endings_share,all,*,*,0,50,No single ending type should exceed 50 percent of rallies in most matchups
