@@ -22,8 +22,23 @@ public sealed class HumanStrategy : IStrategy
     public (Card Card, GridPlayer Receiver) ChooseServe(List<Card> hand, List<GridPlayer> eligibleReceivers) =>
         _channel.Post<(Card, GridPlayer)>(new ServeRequest { Hand = hand, EligibleReceivers = eligibleReceivers });
 
-    public GridPlayer ChooseFreeBallTarget(List<GridPlayer> eligibleReceivers) =>
-        _channel.Post<GridPlayer>(new FreeBallTargetRequest { EligibleReceivers = eligibleReceivers });
+    // Not a real decision -- always aims at the Libero (or the other back-row
+    // passer if, for whatever reason, the Libero isn't in the eligible pool) rather
+    // than asking the human to pick. EligibleReceivers() (Team.cs) is always exactly
+    // {Ds, Libero} in this game's fixed-role model (no real rotation), so this never
+    // actually falls through to the raw first-eligible catch-all in practice.
+    public GridPlayer ChooseFreeBallTarget(List<GridPlayer> eligibleReceivers)
+    {
+        // GridPlayer is a struct, so List<T>.Find can't fall through via ?? (its
+        // "not found" default isn't null) -- explicit index search instead.
+        int liberoIndex = eligibleReceivers.FindIndex(p => p.Role == PlayerRole.Libero);
+        if (liberoIndex >= 0)
+        {
+            return eligibleReceivers[liberoIndex];
+        }
+        int dsIndex = eligibleReceivers.FindIndex(p => p.Role == PlayerRole.Ds);
+        return dsIndex >= 0 ? eligibleReceivers[dsIndex] : eligibleReceivers[0];
+    }
 
     public Card ChooseReceiveCard(List<Card> hand, int serveValue) =>
         _channel.Post<Card>(new ReceiveRequest { Hand = hand, ServeValue = serveValue });
@@ -55,6 +70,9 @@ public sealed class HumanStrategy : IStrategy
 
     public Card ChooseChaseCard(List<Card> hand, int runningTotal, int targetValue) =>
         _channel.Post<Card>(new ChaseCardRequest { Hand = hand, RunningTotal = runningTotal, TargetValue = targetValue });
+
+    public Card ChooseFreeBallDiscard(List<Card> hand) =>
+        _channel.Post<Card>(new FreeBallDiscardRequest { Hand = hand });
 
     public Card? ChooseExchangeCard(List<Card> hand, Card deckTop) =>
         _channel.Post<Card?>(new ExchangeCardRequest { Hand = hand, DeckTop = deckTop });

@@ -96,6 +96,43 @@ namespace VolleyballCore.Tests
             Assert.IsTrue(foundCase, "No seed among the first 500 produced a chase-recovered reception.");
         }
 
+        private static readonly Regex FreeBallDiscardRegex = new(@"Chase:\s+discard (\d+) \(cost of the free ball\)");
+
+        /// <summary>
+        /// A successful chase isn't free -- on top of whatever was spent chasing itself,
+        /// the recovering team must discard one more card before the mandatory free ball
+        /// crosses the net. Confirms the discard is narrated with a valid card value, and
+        /// that it happens strictly between the chase succeeding and the free ball being
+        /// announced (i.e. it's genuinely the cost of THIS free ball, not some unrelated
+        /// discard from earlier in the same rally).
+        /// </summary>
+        [Test]
+        public void SuccessfulChaseDiscardsACardBeforeTheFreeBallCrosses()
+        {
+            bool foundCase = false;
+            for (int seed = 0; seed < 500 && !foundCase; seed++)
+            {
+                var rally = MakeRallyWithNarrative(seed, out List<string> narrative);
+                rally.Play();
+
+                int chaseSucceededIndex = narrative.FindIndex(l => l.Trim() == "Chase:   SUCCEEDED");
+                int freeBallIndex = narrative.FindIndex(l => l.Contains("SUCCEEDED — mandatory free ball to "));
+                if (chaseSucceededIndex < 0 || freeBallIndex < 0)
+                {
+                    continue;
+                }
+                foundCase = true;
+
+                int discardIndex = narrative.FindIndex(chaseSucceededIndex, l => FreeBallDiscardRegex.IsMatch(l));
+                Assert.That(discardIndex, Is.GreaterThan(chaseSucceededIndex), $"seed {seed}: discard should come after the chase succeeds");
+                Assert.That(discardIndex, Is.LessThan(freeBallIndex), $"seed {seed}: discard should come before the free ball crosses");
+
+                int discardedValue = int.Parse(FreeBallDiscardRegex.Match(narrative[discardIndex]).Groups[1].Value);
+                Assert.That(discardedValue, Is.InRange(1, 10), $"seed {seed}: discarded card should be a real card value");
+            }
+            Assert.IsTrue(foundCase, "No seed among the first 500 produced a chase-recovered reception.");
+        }
+
         // "≤ tip"/"> tip" (not the bare "≥ N"/"< N" a normal hit's dig line uses) is what
         // distinguishes a tip's dig line from a hit's in this narrative format.
         private static readonly Regex TipStuffedRegex = new(@"Tip:\s+(\d+) vs lowest blocker (\d+)\s+→\s+STUFFED");

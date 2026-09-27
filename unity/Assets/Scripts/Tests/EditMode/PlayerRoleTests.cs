@@ -26,6 +26,17 @@ namespace VolleyballCore.Tests
         }
 
         [Test]
+        public void LaneToDefendingRoleIsMirroredAcrossTheNet()
+        {
+            // The physically mirrored court means an attacker's lane 1 (their OH, per
+            // LaneToRole) faces the defending team's OPP, not their OH -- lane 3 mirrors
+            // the other way, and lane 2 (MB) stays put since the middle isn't mirrored.
+            Assert.AreEqual(PlayerRole.Opp, PlayerRoleExtensions.LaneToDefendingRole[1]);
+            Assert.AreEqual(PlayerRole.Mb, PlayerRoleExtensions.LaneToDefendingRole[2]);
+            Assert.AreEqual(PlayerRole.Oh, PlayerRoleExtensions.LaneToDefendingRole[3]);
+        }
+
+        [Test]
         public void DisplayNameMatchesPythonEnumValues()
         {
             Assert.AreEqual("Setter", PlayerRole.Setter.DisplayName());

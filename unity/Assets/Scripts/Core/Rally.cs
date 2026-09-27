@@ -92,8 +92,15 @@ namespace VolleyballCore
                         0);
                 }
                 // A successful chase skips the normal attack and crosses back as a
-                // mandatory, guaranteed free ball instead.
+                // mandatory, guaranteed free ball instead -- but it isn't free for the
+                // chasing team: they pay for it by discarding one more card on top of
+                // whatever was spent chasing itself. Any card is valid (unlike every
+                // other hand decision in the game, there's no value threshold here), so
+                // this is purely a cost, not a check that can fail.
                 _rcv.RefillHand();
+                Card discardCard = _rcvStrat.ChooseFreeBallDiscard(_rcv.Hand);
+                _rcv.PlayCard(discardCard);
+                Narrate($"  Chase:   discard {discardCard.Value} (cost of the free ball)");
                 GridPlayer freeBallTarget = _rcvStrat.ChooseFreeBallTarget(_srv.EligibleReceivers());
                 Narrate($"  Chase:   SUCCEEDED — mandatory free ball to {_srv.Name} ({freeBallTarget.Role.DisplayName()})");
                 attacker = _srv;
@@ -947,7 +954,7 @@ namespace VolleyballCore
 
         private (Card, GridPlayer) PhaseServe()
         {
-            var eligible = _rcv.EligibleReceivers();
+            var eligible = _rcv.EligibleServeReceivers();
             Card card;
             GridPlayer target;
             if (_srv.Hand.Count > 0)

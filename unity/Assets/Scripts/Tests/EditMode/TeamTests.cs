@@ -67,6 +67,24 @@ namespace VolleyballCore.Tests
         }
 
         [Test]
+        public void EligibleServeReceiversIncludesOhAndOpp()
+        {
+            var team = MakeTeam();
+            var roles = team.EligibleServeReceivers().Select(p => p.Role).ToList();
+            Assert.IsTrue(roles.Contains(PlayerRole.Oh));
+            Assert.IsTrue(roles.Contains(PlayerRole.Opp));
+        }
+
+        [Test]
+        public void EligibleServeReceiversExcludesMbAndSetter()
+        {
+            var team = MakeTeam();
+            var roles = team.EligibleServeReceivers().Select(p => p.Role).ToList();
+            Assert.IsFalse(roles.Contains(PlayerRole.Mb));
+            Assert.IsFalse(roles.Contains(PlayerRole.Setter));
+        }
+
+        [Test]
         public void PlayCardRemovesFromHandAndDiscards()
         {
             var team = MakeTeam();

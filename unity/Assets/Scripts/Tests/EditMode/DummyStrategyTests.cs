@@ -67,26 +67,28 @@ namespace VolleyballCore.Tests
         {
             // Neither lane 1 nor 3 is MB's home, so MB blindly falls back to whichever
             // comes first in its own reachable-lanes order (1, 2, 3) -- lane 1 here --
-            // doubling it, while OPP (whose home, 3, IS attacked) covers lane 3 alone.
+            // doubling it, while OH (whose home is mirrored to lane 3, which IS attacked)
+            // covers lane 3 alone.
             var hand = new List<Card> { C(2), C(4), C(6) };
             var result = _strat.ChooseBlockCards(hand, new List<int> { 1, 3 });
             Assert.AreEqual(3, result.Count);
-            Assert.AreEqual((1, C(2)), result[PlayerRole.Oh]);
+            Assert.AreEqual((3, C(2)), result[PlayerRole.Oh]);
             Assert.AreEqual((1, C(4)), result[PlayerRole.Mb]);
-            Assert.AreEqual((3, C(6)), result[PlayerRole.Opp]);
+            Assert.AreEqual((1, C(6)), result[PlayerRole.Opp]);
         }
 
         [Test]
         public void ChooseBlockCardsThreeLanesSpreadsOneCardEach()
         {
-            // Every blocker's own home lane is attacked, so each covers their own --
-            // full spread, no doubling.
+            // Every blocker's own (mirrored) home lane is attacked, so each covers
+            // their own -- full spread, no doubling. OH's home is mirrored to lane 3,
+            // OPP's to lane 1.
             var hand = new List<Card> { C(1), C(2), C(3) };
             var result = _strat.ChooseBlockCards(hand, new List<int> { 1, 2, 3 });
             Assert.AreEqual(3, result.Count);
-            Assert.AreEqual((1, C(1)), result[PlayerRole.Oh]);
+            Assert.AreEqual((3, C(1)), result[PlayerRole.Oh]);
             Assert.AreEqual((2, C(2)), result[PlayerRole.Mb]);
-            Assert.AreEqual((3, C(3)), result[PlayerRole.Opp]);
+            Assert.AreEqual((1, C(3)), result[PlayerRole.Opp]);
         }
 
         [Test]

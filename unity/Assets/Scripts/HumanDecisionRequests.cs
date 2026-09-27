@@ -16,11 +16,6 @@ public sealed class ServeRequest
     public List<GridPlayer> EligibleReceivers;
 }
 
-public sealed class FreeBallTargetRequest
-{
-    public List<GridPlayer> EligibleReceivers;
-}
-
 public sealed class ReceiveRequest
 {
     public List<Card> Hand;
@@ -71,6 +66,12 @@ public sealed class ChaseCardRequest
     public List<Card> Hand;
     public int RunningTotal;
     public int TargetValue;
+}
+
+/// <summary>The cost of a successful chase -- any card from hand, no threshold to meet.</summary>
+public sealed class FreeBallDiscardRequest
+{
+    public List<Card> Hand;
 }
 
 public sealed class ExchangeCardRequest

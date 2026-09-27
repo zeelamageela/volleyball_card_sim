@@ -122,15 +122,15 @@ namespace VolleyballCore.Tests
         [Test]
         public void ChooseBlockCardsSingleOutsideLaneOnlyReachableBlockersConverge()
         {
-            // Lane 1 can only be reached by OH (home) and MB (adjacent) -- OPP can't
-            // help there at all -- so exactly those two converge on it.
+            // Lane 1 can only be reached by OPP (mirrored home) and MB (adjacent) --
+            // OH can't help there at all -- so exactly those two converge on it.
             var hand = new List<Card> { C(7), C(5), C(3) };
             var result = Strat().ChooseBlockCards(hand, new List<int> { 1 });
             Assert.AreEqual(2, result.Count);
-            Assert.IsTrue(result.ContainsKey(PlayerRole.Oh));
+            Assert.IsTrue(result.ContainsKey(PlayerRole.Opp));
             Assert.IsTrue(result.ContainsKey(PlayerRole.Mb));
-            Assert.IsFalse(result.ContainsKey(PlayerRole.Opp));
-            Assert.AreEqual(1, result[PlayerRole.Oh].Lane);
+            Assert.IsFalse(result.ContainsKey(PlayerRole.Oh));
+            Assert.AreEqual(1, result[PlayerRole.Opp].Lane);
             Assert.AreEqual(1, result[PlayerRole.Mb].Lane);
         }
 

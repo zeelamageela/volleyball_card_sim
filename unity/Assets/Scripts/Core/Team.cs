@@ -55,13 +55,31 @@ namespace VolleyballCore
             throw new ArgumentException($"No player with role {role}");
         }
 
-        /// <summary>Back-row players who can receive a serve (excludes Setter).</summary>
+        /// <summary>Back-row players who can receive a serve (excludes Setter). Used
+        /// for a free ball's mandatory target, not a serve's -- see
+        /// EligibleServeReceivers for that.</summary>
         public List<GridPlayer> EligibleReceivers()
         {
             var result = new List<GridPlayer>();
             foreach (var p in Players)
             {
                 if (p.CanReceiveServe() && p.IsBackRow())
+                {
+                    result.Add(p);
+                }
+            }
+            return result;
+        }
+
+        /// <summary>Who a serve can be targeted at: every back-row player, plus the
+        /// front-row wing hitters (OH/OPP) who commonly also pass in a real rotation --
+        /// MB stays excluded, matching how a middle blocker essentially never passes.</summary>
+        public List<GridPlayer> EligibleServeReceivers()
+        {
+            var result = new List<GridPlayer>();
+            foreach (var p in Players)
+            {
+                if (p.CanReceiveServe() && (p.IsBackRow() || p.Role == PlayerRole.Oh || p.Role == PlayerRole.Opp))
                 {
                     result.Add(p);
                 }

@@ -105,6 +105,8 @@ namespace VolleyballCore
 
         public Card ChooseChaseCard(List<Card> hand, int runningTotal, int targetValue) => _rng.Choice(hand);
 
+        public Card ChooseFreeBallDiscard(List<Card> hand) => _rng.Choice(hand);
+
         public Card? ChooseExchangeCard(List<Card> hand, Card deckTop) => null; // Random strategy never exchanges
 
         public Card? ChooseCoverAttempt(List<Card> hand, int threshold)

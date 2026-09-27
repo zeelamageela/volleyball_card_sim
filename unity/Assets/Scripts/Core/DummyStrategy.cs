@@ -81,6 +81,8 @@ namespace VolleyballCore
 
         public Card ChooseChaseCard(List<Card> hand, int runningTotal, int targetValue) => hand[0];
 
+        public Card ChooseFreeBallDiscard(List<Card> hand) => hand[0];
+
         public Card? ChooseExchangeCard(List<Card> hand, Card deckTop) => null; // Dummy never exchanges
 
         public bool CoverDrawsFromDeck() => true; // Blind deck flip -- no hand selection

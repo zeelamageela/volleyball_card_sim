@@ -35,16 +35,36 @@ namespace VolleyballCore
 
         /// <summary>
         /// Lanes a front-row blocker can reach: their own lane (see LaneToRole) plus
-        /// whichever lane(s) are adjacent to it. MB, in the middle, can reach all three;
-        /// OH and OPP, on the outside, can only reach their own lane plus MB's.
+        /// whichever lane(s) are adjacent to it. MB, in the middle, can reach all three.
+        /// The two teams' courts are physically mirrored, so OH's lane 1 sits across the
+        /// net from the opponent's lane 3, not their lane 1: OH reaches lanes 3 and 2,
+        /// while OPP, mirrored the other way, reaches lanes 1 and 2.
         /// </summary>
         public static readonly IReadOnlyDictionary<PlayerRole, IReadOnlyList<int>> BlockableLanes =
             new Dictionary<PlayerRole, IReadOnlyList<int>>
             {
-                { PlayerRole.Oh, new[] { 1, 2 } },
+                { PlayerRole.Oh, new[] { 3, 2 } },
                 { PlayerRole.Mb, new[] { 1, 2, 3 } },
-                { PlayerRole.Opp, new[] { 2, 3 } },
+                { PlayerRole.Opp, new[] { 1, 2 } },
             };
+
+        /// <summary>
+        /// Attacking lane index -> the DEFENDING team's own primary (home-reach) blocker
+        /// for that lane, i.e. LaneToRole's mirror-image counterpart: the two teams'
+        /// courts are physically mirrored (see BlockableLanes), so the attacker's lane 1
+        /// faces the defender's OPP, not their OH, across the net. Presentation-facing
+        /// (e.g. positioning a revealed block value above the physically correct
+        /// blocker) -- Core's own quick-set blind block doesn't track a specific role at
+        /// all (see Rally.cs's PhaseBlockCommit), so this is the same "primary" choice
+        /// DummyStrategy/SmartStrategy already converge on via BlockableLanes for a
+        /// single forced blocker.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<int, PlayerRole> LaneToDefendingRole = new Dictionary<int, PlayerRole>
+        {
+            { 1, PlayerRole.Opp },
+            { 2, PlayerRole.Mb },
+            { 3, PlayerRole.Oh },
+        };
 
         public static bool IsFrontRow(this PlayerRole role) => FrontRowRolesSet.Contains(role);
         public static bool IsBackRow(this PlayerRole role) => BackRowRolesSet.Contains(role);

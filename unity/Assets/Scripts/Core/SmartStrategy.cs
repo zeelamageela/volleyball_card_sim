@@ -310,6 +310,10 @@ namespace VolleyballCore
             return hand.OrderByDescending(c => c.Value).First();
         }
 
+        /// <summary>No threshold to satisfy here -- discard the weakest card, keeping the
+        /// stronger ones in hand for whatever comes next.</summary>
+        public Card ChooseFreeBallDiscard(List<Card> hand) => hand.OrderBy(c => c.Value).First();
+
         public Card? ChooseExchangeCard(List<Card> hand, Card deckTop)
         {
             // Swap out the worst hand card if deck top is significantly better

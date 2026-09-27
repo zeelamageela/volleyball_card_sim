@@ -59,6 +59,14 @@ namespace VolleyballCore
         Card ChooseChaseCard(List<Card> hand, int runningTotal, int targetValue);
 
         /// <summary>
+        /// A successful chase costs a card on top of the cards spent chasing itself --
+        /// this one is discarded (not committed toward anything) as the price of sending
+        /// the mandatory free ball across. Any card is valid; there's no value threshold
+        /// to satisfy, unlike every other hand decision in the game.
+        /// </summary>
+        Card ChooseFreeBallDiscard(List<Card> hand);
+
+        /// <summary>
         /// Called before hit placement when the team has the exchange_card ability.
         /// Return a card from hand to discard in exchange for deckTop, or null to decline.
         /// </summary>

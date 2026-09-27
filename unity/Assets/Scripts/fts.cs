@@ -582,4 +582,31 @@ public class fts
 
         return true;
     }
+
+    // Samples points along the same constant-acceleration arc solve_ballistic_arc_lateral
+    // (and therefore BallFlight.FlyTo, which calls it) already solves for -- reused here
+    // purely for previewing where a flight will go, without running a real physics step
+    // loop. Analytic, so it exactly matches whatever FlyTo will actually fly rather than
+    // approximating it.
+    public static Vector3[] ComputeArcPreviewPoints(Vector3 start, Vector3 end, float peakHeight, float lateralSpeed, int segments = 20)
+    {
+        Vector3 diffXZ = new(end.x - start.x, 0f, end.z - start.z);
+        if (diffXZ.magnitude < 0.01f)
+        {
+            return new[] { start, end };
+        }
+        float absolutePeakHeight = Mathf.Max(start.y, end.y) + peakHeight;
+        if (!solve_ballistic_arc_lateral(start, lateralSpeed, end, absolutePeakHeight, out Vector3 fireVelocity, out float gravity))
+        {
+            return new[] { start, end };
+        }
+        float totalTime = diffXZ.magnitude / lateralSpeed;
+        var points = new Vector3[segments + 1];
+        for (int i = 0; i <= segments; i++)
+        {
+            float t = totalTime * i / segments;
+            points[i] = start + fireVelocity * t + 0.5f * Vector3.down * gravity * t * t;
+        }
+        return points;
+    }
 }
