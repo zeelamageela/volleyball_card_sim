@@ -1,0 +1,25 @@
+team_a,team_b,mode,games,seed,strategy_a,strategy_b,deck_type_a,deck_type_b,passive_a,passive_b,wins_a,wins_b,win_rate_a,win_rate_b,avg_rallies,avg_exchanges,top_endings
+Blitz,Grind,pvp,300,42,smart,smart,standard,standard,,No Passive,162,138,54.0,46.0,25.19,2.421,Stuffed:5869 | Tip not dug:647 | Kill (chase failed):452
+Blitz,Easy,pvd,300,43,smart,dummy,standard,dummy,,Safe Setter,112,188,37.33,62.67,25.513,1.741,"Stuffed:4778 | Heavy spin not dug, no chase (attack=8, dig=1):226 | Heavy spin not dug, no chase (attack=9, dig=1):213"
+Blitz,Medium,pvd,300,44,smart,dummy,standard,dummy,,Back Court Threat,144,156,48.0,52.0,25.193,2.618,"Stuffed:6472 | Heavy spin not dug, no chase (attack=9, dig=8):105 | Tip not dug:86"
+Blitz,Hard,pvd,300,45,smart,dummy,standard,dummy,,Elite Draw,148,152,49.33,50.67,24.747,1.875,Stuffed:6062 | Tip not dug:407 | Kill (chase failed):208
+Blitz,Spread,pvp,300,46,smart,smart,standard,standard,,Lane Chess,185,115,61.67,38.33,24.7,2.327,Stuffed:5844 | Tip not dug:625 | Kill (chase failed):392
+Blitz,Backline,pvp,300,47,smart,smart,standard,standard,,Transition Sniper,200,100,66.67,33.33,24.303,2.199,Stuffed:5762 | Tip not dug:597 | Kill (chase failed):407
+Grind,Blitz,pvp,300,48,smart,smart,standard,standard,No Passive,,134,166,44.67,55.33,24.96,2.447,Stuffed:5791 | Tip not dug:638 | Kill (chase failed):477
+Grind,Easy,pvd,300,49,smart,dummy,standard,dummy,No Passive,Safe Setter,54,246,18.0,82.0,23.963,1.897,"Stuffed:4929 | Heavy spin not dug, no chase (attack=8, dig=1):216 | Heavy spin not dug, no chase (attack=9, dig=1):172"
+Grind,Medium,pvd,300,50,smart,dummy,standard,dummy,No Passive,Back Court Threat,63,237,21.0,79.0,24.76,2.859,Stuffed:7202 | Tip not dug:84 | Kill (chase failed):77
+Grind,Hard,pvd,300,51,smart,dummy,standard,dummy,No Passive,Elite Draw,94,206,31.33,68.67,24.197,1.9,Stuffed:6113 | Tip not dug:402 | Kill (chase failed):232
+Grind,Spread,pvp,300,52,smart,smart,standard,standard,No Passive,Lane Chess,183,117,61.0,39.0,24.867,2.383,Stuffed:6082 | Tip not dug:644 | Kill (chase failed):383
+Grind,Backline,pvp,300,53,smart,smart,standard,standard,No Passive,Transition Sniper,153,147,51.0,49.0,24.457,2.255,Stuffed:6097 | Tip not dug:626 | Kill (chase failed):368
+Spread,Blitz,pvp,300,54,smart,smart,standard,standard,Lane Chess,,95,205,31.67,68.33,24.543,2.34,Stuffed:5855 | Tip not dug:606 | Kill (chase failed):389
+Spread,Grind,pvp,300,55,smart,smart,standard,standard,Lane Chess,No Passive,116,184,38.67,61.33,24.763,2.414,Stuffed:6007 | Tip not dug:645 | Kill (chase failed):401
+Spread,Easy,pvd,300,56,smart,dummy,standard,dummy,Lane Chess,Safe Setter,65,235,21.67,78.33,24.72,1.863,"Stuffed:5206 | Heavy spin not dug, no chase (attack=8, dig=1):250 | Heavy spin not dug, no chase (attack=9, dig=1):208"
+Spread,Medium,pvd,300,57,smart,dummy,standard,dummy,Lane Chess,Back Court Threat,77,223,25.67,74.33,24.823,2.857,Stuffed:7105 | Kill (chase failed):90 | Tip not dug:89
+Spread,Hard,pvd,300,58,smart,dummy,standard,dummy,Lane Chess,Elite Draw,115,185,38.33,61.67,24.817,1.902,Stuffed:6250 | Tip not dug:397 | Kill (chase failed):202
+Spread,Backline,pvp,300,59,smart,smart,standard,standard,Lane Chess,Transition Sniper,144,156,48.0,52.0,24.77,2.185,Stuffed:6172 | Tip not dug:621 | Kill (chase failed):328
+Backline,Blitz,pvp,300,60,smart,smart,standard,standard,Transition Sniper,,99,201,33.0,67.0,24.367,2.194,Stuffed:5725 | Tip not dug:610 | Kill (chase failed):406
+Backline,Grind,pvp,300,61,smart,smart,standard,standard,Transition Sniper,No Passive,118,182,39.33,60.67,24.66,2.238,Stuffed:6067 | Tip not dug:663 | Kill (chase failed):385
+Backline,Easy,pvd,300,62,smart,dummy,standard,dummy,Transition Sniper,Safe Setter,62,238,20.67,79.33,24.273,2.003,"Stuffed:5270 | Heavy spin not dug, no chase (attack=8, dig=1):229 | Heavy spin not dug, no chase (attack=8, dig=2):185"
+Backline,Medium,pvd,300,63,smart,dummy,standard,dummy,Transition Sniper,Back Court Threat,50,250,16.67,83.33,23.767,2.916,Stuffed:6877 | Kill (chase failed):121 | Tip not dug:81
+Backline,Hard,pvd,300,64,smart,dummy,standard,dummy,Transition Sniper,Elite Draw,1,299,0.33,99.67,19.143,1.798,"Stuffed:4244 | Tip not dug:145 | Heavy spin not dug, no chase (attack=9, dig=1):98"
+Backline,Spread,pvp,300,65,smart,smart,standard,standard,Transition Sniper,Lane Chess,175,125,58.33,41.67,24.38,2.215,Stuffed:6144 | Tip not dug:535 | Kill (chase failed):329

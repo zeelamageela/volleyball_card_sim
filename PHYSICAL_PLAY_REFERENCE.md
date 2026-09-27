@@ -46,36 +46,20 @@ Dummy hand: [2, 4, 5, 7] → **2 even, 2 odd** → Tie
 
 ---
 
-## Matching Rules
+## Combo: Two Hitters, One Lane
 
-Matching happens before you choose your final lane and before normal attack resolution.
+When both a front-row and a back-row attacker share the same lane, that's a **combo**. Decide your resolve order (which card goes first).
 
-### Attacker-Blocker Match:
-- When your attack card **equals** a block card value → **Lane eliminated**
-- You **cannot choose** that lane
-- Must pick from remaining lanes
-- This is a **match**, not a touched-block deflect
-- If **all lanes matched** → Dummy wins the rally
-
-### Blocker-Blocker Match:
-- When dummy places **two identical cards** in same lane → Cards cancel
-- Lane becomes **unblocked** (0 block value)
-- Your attack proceeds against empty block
-
-### Attacker-Attacker Match:
-- If two of your attackers in the same lane have the same value → Lane eliminated
-- Defender wins that elimination result
+- Resolve the first card normally (see Attack Resolution below).
+- If it **kills or deflects**, stop — the second card is discarded unused.
+- If it's **genuinely stuffed**, remove the single **highest** blocker card in that lane, then resolve the second card against whatever block remains.
+- Either card may independently be declared a tip.
 
 ### Example:
-**You arm:** Lane 1=7, Lane 2=4, Lane 3=3  
-**Dummy blocks:** Lane 1=7 (match!), Lane 2=9, Lane 3=2
-
-**After matching:**
-- Lane 1: **ELIMINATED** (7 vs 7 match)
-- Lane 2: Available (4 vs 9 = stuffed)
-- Lane 3: Available (3 vs 2+2 adjacent = 4, stuffed)
-
-**Your choice:** Pick Lane 3 (loses by 1) or Lane 2 (loses by 5)
+**You place:** Lane 2 front=8, Lane 2 back=8. **Dummy blocks lane 2:** [10, 8] (total 18).
+- Resolve front card first: 8 vs 18 → **STUFFED**.
+- Remove the highest blocker (10) → remaining block is just [8].
+- Resolve back card: 8 vs 8 → **exact tie → DEFLECT** (see below).
 
 ---
 
@@ -84,34 +68,42 @@ Matching happens before you choose your final lane and before normal attack reso
 | Result | Condition | Outcome |
 |--------|-----------|---------|
 | **KILL** | Attack > Block | Defender must dig |
-| **DEFLECT** | Non-matching block is 0 to 4 over attack | Dig side depends on deflect strength |
-| **STUFFED** | Non-matching block is 5 or more over attack | Defender scores immediately |
+| **DEFLECT** | Attack **exactly equals** Block | Ball falls to your **own side** — you dig it |
+| **STUFFED** | Attack < Block (any amount, not tied) | Defender scores immediately |
 
-Deflect side split:
-- Block - Attack 0 to 2: ball deflects to defender side (defender digs)
-- Block - Attack 3 to 4: ball deflects to attacker side (attacker digs)
+There is no more three-tier margin split and no more card-matching system — a lane's outcome is decided purely by comparing the attack value to the block total.
 
-Deflect dig target:
-- Use the **highest single block card** in the lane, not the full block total
-- Back-row deflections are +2 harder to dig
-- No chase after a deflect dig
+Deflect (exact tie) dig target:
+- Target = the tied value itself (attack and block are equal).
+- **No chase if this dig fails** — same as every other dig, it's an immediate point to the other side.
+- If you dig it successfully, you keep attacking (the ball never crossed the net).
 
 ---
 
 ## Tip Rules
 
-- Front-row normal attacks may tip when effective attack is **3 or less**
-- Back-row attacks cannot tip
-- Some setter abilities can raise the tip threshold for one exchange
-- Tips are dug like tips, not like full hits
-- No chase after a tip dig
+- Any attack card value **5 or less** may be declared a tip, front row only.
+- Compare your tip to the lane's single **lowest** blocker card (not the block total) -- this is backwards from a normal hit vs. block:
+  - Blocker's card is the **same or lower** than your tip → the blocker reads the soft shot and stuffs it outright. This includes an exact tie -- no deflection for a tip, unlike a tied hit.
+  - Blocker's card is **higher** than your tip → the blocker's committed to a bigger swing and misses it. Tip beats the block: defender digs, **same-or-lower** against your tip's value. **No chase if this dig fails.**
+- Back-row attacks cannot tip.
+
+---
+
+## Digging & Chase
+
+- Any dig (kill or deflect) needs equal-or-higher.
+- **A failed dig is always an immediate point to the attacking side — no chase, ever**, regardless of dig type (kill, tip, roll shot, tied-deflection) or block state. There's no "broken dig" free-ball recovery anymore.
+- **Chase exists in exactly one place: a failed serve reception.** Add up to 2 more cards to your total, trying to reach the serve's value.
+  - Chase succeeds → play continues normally (set + attack as usual), same as a clean pass.
+  - Chase fails → ace, point to the server.
 
 ---
 
 ## Dummy Other Decisions
 
 - **Attack lane:** First available lane
-- **Tip/Hit:** Always tips if tip-eligible (normally card ≤3 on a front-row attack)
+- **Tip/Hit:** Always tips if tip-eligible (card ≤5 on a front-row attack)
 - **Dig:** First card in hand
 - **Chase:** First card in hand
 - **Set:** First card in hand

@@ -1,5 +1,27 @@
 # Changelog
 
+## Locked Ruleset Rewrite (September 2026)
+
+Rewrote the core resolution engine to match a newly locked, deliberately simplified ruleset — the previous system (below, Phase 5 and earlier) had gone deep enough on balance/complexity that it stopped being fun to play. This is a rules simplification, not a balance pass; PvD win rates are known to be off the old target bands and are being deliberately deprioritized for now.
+
+### Retired
+- **Card-matching cancellation system** (blocker-blocker, attacker-attacker, attacker-blocker lane elimination) — removed entirely, no replacement mechanic.
+- **Three-tier attack resolution** (kill / soft-deflect / hard-deflect / stuffed by margin) — replaced by a two-tier kill/stuffed split with deflection only on an exact numeric tie.
+- **Two-tier chase** (ARMED_ATTACK single-lane exposed attack, then FREE_BALL) — collapsed into one chase mechanic; success means different things depending on context (receive vs. dig failure).
+- **Per-team normal set-template CSV bundles** (`data/set_templates.csv`, `set_type=normal`) — replaced by one universal 3-tier template for every team. Broken-play templates are untouched (still per-team, still an open question).
+- **Quickset-specific no-chase rule** — replaced by a more general "unblocked hit can't be chased" rule.
+
+### Changed
+- Deck: flat 40 cards (4 copies each of Ace(1)-10), replacing the old skewed 28-card standard deck.
+- Tip threshold raised from <=3 to <=5; tip now checks against the lane's single lowest blocker card instead of the full block total.
+- Added the "combo" mechanic for two attackers sharing one lane: declared resolve order, stuffed-then-remove-highest-blocker-then-resolve-second-card.
+
+### Added
+- `src/mats.py` / `list_mats.py` — an explicit `Mat` object (6 fixed seats, each with a player + at most one ability) for the 4 pickable team identities (Blitz, Grind, Spread, Backline), built from the existing roster/ability CSVs.
+
+### Discovered (not fixed, worth knowing)
+- `data/player_cards.csv`'s `is_active: false` does not mean an ability is disabled — it means "passive, fires automatically." All 52 current ability rows are live in every game today, despite reading like a placeholder/inactive value.
+
 ## Phase 5 - Comprehensive Matching System (May 2026)
 
 ### Added

@@ -2,7 +2,7 @@
 Tests for rally-ending distribution, matching mechanics, and ability effectiveness.
 
 Coverage areas:
-  - Rally outcome frequencies (stuffed, matching deflections, tips, rolls, wipes)
+  - Rally outcome frequencies (stuffed, tips, rolls, wipes)
   - SmartStrategy blocking correctness (never places same-value pairs)
   - AbilityEngine unit tests: wide_spread_bonus, wipe_block, roll_shot,
     pierce_block, no_chase
@@ -164,11 +164,6 @@ class TestRallyEndingDistribution(unittest.TestCase):
         rate = self._pct(lambda r: r.reason.startswith("Stuffed"))
         self.assertGreater(rate, 0.35, f"Stuffed only {rate:.1%} — blocks seem too weak")
         self.assertLess(rate, 0.70, f"Stuffed {rate:.1%} — blocks seem too dominant")
-
-    def test_matching_deflections_are_common(self):
-        """Deflect-outs (draw-in) should still occur on multi-lane attacks (>0.5%)."""
-        rate = self._pct(lambda r: "deflection out" in r.reason)
-        self.assertGreater(rate, 0.005, f"Matching deflections only {rate:.1%}")
 
     def test_tips_occur(self):
         """Tip-not-dug endings should be present (>3%)."""

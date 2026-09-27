@@ -23,11 +23,8 @@ class Card:
 
 class Deck:
     """
-    Standard 28-card deck or modified "dummy" 28-card deck.
-
-    Standard counts (28 cards):
-      1×1  2×2  3×3  4×4  4×5  4×6  4×7  3×8  2×9  1×10
-      Distribution: 46% low (1-4), 29% mid (5-6), 36% high (7-10)
+    Standard flat 40-card deck (4 copies each of Ace(1)-10) or a modified
+    "dummy" 28-card deck used for AI difficulty scaling.
 
     Dummy counts (28 cards) - Gradual shift to extremes:
       1×2  2×2  3×3  4×4  5×3  6×3  7×4  8×3  9×3  10×2
@@ -35,7 +32,7 @@ class Deck:
       (Reduces mediocre middle, adds finesse at bottom and power at top)
     """
 
-    _STANDARD_COUNTS: Dict[int, int] = {1: 1, 2: 2, 3: 3, 4: 4, 5: 4, 6: 4, 7: 4, 8: 3, 9: 2, 10: 1}
+    _STANDARD_COUNTS: Dict[int, int] = {v: 4 for v in range(1, 11)}
     _DUMMY_COUNTS: Dict[int, int] = {1: 2, 2: 2, 3: 2, 4: 3, 5: 2, 6: 2, 7: 4, 8: 5, 9: 4, 10: 2}
     _COLORS = ("red", "black")
     _DECK_TYPES_CSV = Path("data/deck_types.csv")

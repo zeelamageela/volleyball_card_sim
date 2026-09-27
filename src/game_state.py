@@ -7,20 +7,18 @@ from typing import Dict, List
 
 class AttackOutcomeType(Enum):
     KILL    = "kill"     # attack > block (ball breaks through to defender)
-    DEFLECT = "deflect"  # block − attack in {1, 2} (ball deflects back to attacker)
-    STUFFED = "stuffed"  # block − attack >= 3 (clean block, defense wins rally)
+    DEFLECT = "deflect"  # attack == block, exact tie (ball falls to attacker's own side)
+    STUFFED = "stuffed"  # block >= attack, not tied (clean block, defense wins rally)
 
 
 class ChaseOutcome(Enum):
-    ARMED_ATTACK = "armed_attack"  # first chase card brings total to target → arm OH/OPP
-    FREE_BALL    = "free_ball"     # second chase card brings total to target → free ball over
-    FAILED       = "failed"        # both chase cards fail → attacking team wins the point
+    SUCCESS = "success"  # running total reached target within the attempt cap
+    FAILED  = "failed"   # attempts exhausted without reaching target → opponent wins the point
 
 
 @dataclass
 class ChaseResult:
     outcome: ChaseOutcome
-    armed_lane: int = 0  # lane 1 (OH) or 3 (OPP); meaningful only for ARMED_ATTACK
 
 
 @dataclass
