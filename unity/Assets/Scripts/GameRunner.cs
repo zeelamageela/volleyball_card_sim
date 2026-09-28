@@ -519,6 +519,11 @@ public class GameRunner : MonoBehaviour
 
     private HumanDecisionChannel _channel;
     private List<string> _narrative;
+    // Typed, ordered record of the whole game -- Rally's own events plus the human's
+    // decision prompts (DecisionRecordingStrategy) and each rally's score, all in the
+    // order Core actually ran them. Written on the game's background thread. Not read
+    // by presentation yet: it's the replacement being built for narrative parsing.
+    private RallyEventLog _events;
     private int _narrativeReadIndex;
     private Task<string> _gameTask;
     private bool _resultLogged;
@@ -641,7 +646,8 @@ public class GameRunner : MonoBehaviour
 
         _channel = new HumanDecisionChannel();
         _narrative = new List<string>();
-        var humanStrategy = new HumanStrategy(_channel);
+        _events = new RallyEventLog();
+        var humanStrategy = new DecisionRecordingStrategy(new HumanStrategy(_channel), teamA.Name, _events);
         var aiStrategy = new SmartStrategy(new Random(seedRng.Next()));
 
         // Core has no UnityEngine dependency (VolleyballCore.asmdef: noEngineReferences)
@@ -669,7 +675,7 @@ public class GameRunner : MonoBehaviour
             IStrategy srvStrat = ReferenceEquals(serving, teamA) ? strategyA : strategyB;
             IStrategy rcvStrat = ReferenceEquals(serving, teamA) ? strategyB : strategyA;
 
-            var rally = new Rally(serving, receiving, srvStrat, rcvStrat, rng, _narrative);
+            var rally = new Rally(serving, receiving, srvStrat, rcvStrat, rng, _narrative, _events);
             RallyResult result = rally.Play();
 
             if (result.WinnerName == teamA.Name)
@@ -683,6 +689,7 @@ public class GameRunner : MonoBehaviour
                 server = teamB;
             }
             _narrative.Add($"[Score] {result.WinnerName} wins the rally ({result.Reason}) — {teamA.Name} {_scoreA}, {teamB.Name} {_scoreB}");
+            _events.Emit(new GameScoreEvent(teamA.Name, _scoreA, teamB.Name, _scoreB));
         }
 
         return _scoreA > _scoreB ? teamA.Name : teamB.Name;

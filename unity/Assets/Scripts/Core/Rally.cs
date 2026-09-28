@@ -26,6 +26,7 @@ namespace VolleyballCore
         private readonly IStrategy _rcvStrat;
         private readonly Random _rng;
         private readonly List<string> _narrative;
+        private readonly IRallyEventSink _events;
         private bool _brokenPlay; // Track if setter dug (broken play for next set)
 
         public Rally(
@@ -34,7 +35,8 @@ namespace VolleyballCore
             IStrategy servingStrategy,
             IStrategy receivingStrategy,
             Random rng,
-            List<string> narrative = null)
+            List<string> narrative = null,
+            IRallyEventSink events = null)
         {
             _srv = servingTeam;
             _rcv = receivingTeam;
@@ -42,15 +44,35 @@ namespace VolleyballCore
             _rcvStrat = receivingStrategy;
             _rng = rng;
             _narrative = narrative;
+            _events = events;
             _brokenPlay = false;
         }
 
         private void Narrate(string msg) => _narrative?.Add(msg);
 
+        private void Emit(RallyEvent rallyEvent) => _events?.Emit(rallyEvent);
+
+        private static ShotKind ToShotKind(string shot) => shot switch
+        {
+            "tip" => ShotKind.Tip,
+            "roll" => ShotKind.Roll,
+            "heavy_spin" => ShotKind.HeavySpin,
+            "seam" => ShotKind.Seam,
+            _ => ShotKind.Hit,
+        };
+
         private static string PositionLabel(AttackPosition position) =>
             position == AttackPosition.Front ? "front" : "back";
 
         public RallyResult Play()
+        {
+            Emit(new RallyStartedEvent(_srv.Name, _rcv.Name));
+            RallyResult result = PlayRally();
+            Emit(new RallyEndedEvent(result.WinnerName, result.Reason, result.RallyLength));
+            return result;
+        }
+
+        private RallyResult PlayRally()
         {
             int exchange = 0;
 
@@ -66,6 +88,7 @@ namespace VolleyballCore
                 + (serveValue != serveCard.Value ? $" (eff {serveValue})" : "")
                 + $"  →  targeting {target.Role.DisplayName()}"
             );
+            Emit(new ServeEvent(_srv.Name, serveCard, serveValue, target.Role));
 
             // -- RECEIVE --
             Card receiveCard = PhaseReceive(serveValue);
@@ -75,6 +98,7 @@ namespace VolleyballCore
                 + $"  vs serve {serveValue}"
                 + $"  →  {(rcvOk ? "clean pass" : "FAILED — chase needed")}"
             );
+            Emit(new ReceiveEvent(_rcv.Name, target.Role, receiveCard, serveValue, rcvOk));
 
             Team attacker, defender;
             IStrategy atkStrat, defStrat;
@@ -101,8 +125,10 @@ namespace VolleyballCore
                 Card discardCard = _rcvStrat.ChooseFreeBallDiscard(_rcv.Hand);
                 _rcv.PlayCard(discardCard);
                 Narrate($"  Chase:   discard {discardCard.Value} (cost of the free ball)");
+                Emit(new FreeBallDiscardEvent(_rcv.Name, discardCard));
                 GridPlayer freeBallTarget = _rcvStrat.ChooseFreeBallTarget(_srv.EligibleReceivers());
                 Narrate($"  Chase:   SUCCEEDED — mandatory free ball to {_srv.Name} ({freeBallTarget.Role.DisplayName()})");
+                Emit(new FreeBallEvent(_rcv.Name, _srv.Name, freeBallTarget.Role));
                 attacker = _srv;
                 defender = _rcv;
                 atkStrat = _srvStrat;
@@ -125,7 +151,7 @@ namespace VolleyballCore
 
                 // Consume any pending set delta from a previous dig success
                 int setDelta = attacker.AbilityEngine?.ConsumeSetDelta() ?? 0;
-                var (setCard, template) = PhaseSet(attacker, atkStrat, setDelta);
+                var (setCard, template, setEffectiveValue, setBrokenPlay, setBlind) = PhaseSet(attacker, atkStrat, setDelta);
                 string frontStr = string.Join(" + ", template.FrontLanes.Select(l => LaneNames.GetValueOrDefault(l, l.ToString())));
                 string backStr = template.BackLanes.Count > 0
                     ? string.Join(" + ", template.BackLanes.Select(l => LaneNames.GetValueOrDefault(l, l.ToString())))
@@ -135,6 +161,7 @@ namespace VolleyballCore
                     + $"  →  front [{frontStr}]  back [{backStr}]"
                     + $"  max {template.MaxAttackers}"
                 );
+                Emit(new SetEvent(attacker.Name, exchange, setCard, setEffectiveValue, template, setBrokenPlay, setBlind));
 
                 var attackCards = PhaseHit(attacker, atkStrat, template);
                 foreach (var kv in attackCards.OrderBy(kv => kv.Key))
@@ -153,6 +180,7 @@ namespace VolleyballCore
                                 $"  Attack:  {attacker.Name} lane {kv.Key} {LaneNames.GetValueOrDefault(kv.Key, "")}"
                                 + $"  card {ac.Card.Value} ({PositionLabel(ac.Position)})");
                         }
+                        Emit(new AttackCommitEvent(attacker.Name, kv.Key, ac.Position, ac.Blind ? (Card?)null : ac.Card));
                     }
                 }
 
@@ -189,6 +217,11 @@ namespace VolleyballCore
                 // BLOCK COMMIT (defender places cards blind to lane choice)
                 var (blockLayout, blockMax, blockCards) = PhaseBlockCommit(
                     defender, defStrat, attackCards.Keys.ToList(), quickLanes);
+                Emit(new BlockCommitEvent(
+                    defender.Name,
+                    blockCards.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<Card>)kv.Value.ToList()),
+                    new Dictionary<int, int>(blockLayout),
+                    quickLanes.ToList()));
 
                 // LANE CHOICE -- strategies pick from the committed attack lanes directly
                 // (no card-matching elimination pass; that mechanic was retired).
@@ -268,6 +301,7 @@ namespace VolleyballCore
                 if (attackerRole.HasValue)
                 {
                     Narrate($"  Swing:   {attacker.Name} lane {attackLane} {attackerRole.Value.DisplayName()}");
+                    Emit(new SwingEvent(attacker.Name, attackLane, attackerRole.Value));
                 }
 
                 // Reveal any blind-drawn cards on the committed lane
@@ -278,6 +312,7 @@ namespace VolleyballCore
                         if (bac.Blind)
                         {
                             Narrate($"  Reveal:  lane {attackLane} blind draw  →  card {bac.Card.Value} ({PositionLabel(bac.Position)})");
+                            Emit(new RevealEvent(attacker.Name, attackLane, bac.Card, bac.Position));
                         }
                     }
                 }
@@ -296,6 +331,7 @@ namespace VolleyballCore
                         $"  Combo:   lane {attackLane} — resolve order "
                         + $"{resolveOrder[0].Card.Value} ({PositionLabel(resolveOrder[0].Position)}) then "
                         + $"{resolveOrder[1].Card.Value} ({PositionLabel(resolveOrder[1].Position)})");
+                    Emit(new ComboEvent(attacker.Name, attackLane, resolveOrder.ToList()));
                 }
 
                 // Apply attacker abilities that are decided once per exchange
@@ -351,6 +387,7 @@ namespace VolleyballCore
                                 $"  Combo:   lane {attackLane} card {idx + 1} stuffed"
                                 + $"  →  highest blocker ({highest.Value}) removed,"
                                 + " second card resolves");
+                            Emit(new ComboCardStuffedEvent(attacker.Name, attackLane, idx + 1, highest));
                         }
                         continue;
                     }
@@ -420,6 +457,8 @@ namespace VolleyballCore
                         Narrate(
                             $"  Passive: Back Court Threat ignores first blocker "
                             + $"({sortedBlocks[0]}), effective block = {effectiveBlock}");
+                        Emit(new PassiveAbilityEvent(attacker.Name,
+                            $"Back Court Threat ignores first blocker ({sortedBlocks[0]}), effective block = {effectiveBlock}"));
                     }
                     else
                     {
@@ -427,6 +466,8 @@ namespace VolleyballCore
                         if (laneBlockCards.Count > 0)
                         {
                             Narrate($"  Passive: Back Court Threat ignores single blocker ({laneBlockCards[0].Value})");
+                            Emit(new PassiveAbilityEvent(attacker.Name,
+                                $"Back Court Threat ignores single blocker ({laneBlockCards[0].Value})"));
                         }
                     }
                 }
@@ -452,6 +493,8 @@ namespace VolleyballCore
             Narrate(
                 $"  Resolve: {attacker.Name} lane {attackLane} {LaneNames.GetValueOrDefault(attackLane, "")}"
                 + $"  atk {atkEff}  vs  blk {blkEff}");
+            Emit(new ResolveEvent(attacker.Name, attackLane, attackerRole, attackCard, ac.Position,
+                effectiveAttack, laneBlockValue, effectiveBlock));
 
             int tipThreshold = GameConstants.TipThreshold;
             if (attacker.AbilityEngine != null)
@@ -498,6 +541,7 @@ namespace VolleyballCore
             }
 
             Narrate($"  Shot:    {shot.ToUpperInvariant()}");
+            Emit(new ShotEvent(attacker.Name, ToShotKind(shot)));
 
             return shot switch
             {
@@ -545,6 +589,8 @@ namespace VolleyballCore
             if (lowestBlocker.HasValue && lowestBlocker.Value <= effectiveTip)
             {
                 Narrate($"  Tip:     {effectiveTip} vs lowest blocker {lowestBlocker.Value}  →  STUFFED");
+                Emit(new AttackOutcomeEvent(attacker.Name, attackLane, ShotKind.Tip, AttackOutcomeType.Stuffed,
+                    effectiveTip, lowestBlocker.Value));
                 if (!isLastCard)
                 {
                     return CardOutcome.StuffedContinue();
@@ -557,6 +603,8 @@ namespace VolleyballCore
 
             // Tip beats the block (or the lane is empty): defender digs, same-or-lower,
             // no chase on failure.
+            Emit(new AttackOutcomeEvent(attacker.Name, attackLane, ShotKind.Tip, AttackOutcomeType.Kill,
+                effectiveTip, lowestBlocker ?? 0));
             Card digCard = PhaseDig(defender, defStrat, effectiveTip, DigType.Tip);
             PlayerRole defenderRole = AttackResolution.GetDigDefenderRole(attackLane, attackCard.Value);
             int effectiveTipDig = digCard.Value;
@@ -572,6 +620,7 @@ namespace VolleyballCore
                     $"  Dig:     {defender.Name} card {digCard.Value}"
                     + (effectiveTipDig != digCard.Value ? $" (eff {effectiveTipDig})" : "")
                     + $"  ≤ tip {effectiveTip}  →  DUG");
+                Emit(new DigEvent(defender.Name, defenderRole, digCard, effectiveTipDig, effectiveTip, ShotKind.Tip, true, false));
                 // Tips are too fast for adjacent coverage -- setter dig always breaks play
                 _brokenPlay = defenderRole == PlayerRole.Setter;
                 return CardOutcome.Continue(defender, attacker, defStrat, atkStrat);
@@ -581,6 +630,7 @@ namespace VolleyballCore
                 $"  Dig:     {defender.Name} card {digCard.Value}"
                 + (effectiveTipDig != digCard.Value ? $" (eff {effectiveTipDig})" : "")
                 + $"  > tip {effectiveTip}  →  NOT DUG, no chase");
+            Emit(new DigEvent(defender.Name, defenderRole, digCard, effectiveTipDig, effectiveTip, ShotKind.Tip, false, false));
             return CardOutcome.Ended(new RallyResult(
                 attacker.Name,
                 $"Tip not dug, no chase (tip={effectiveTip}, dig={digCard.Value})",
@@ -604,10 +654,12 @@ namespace VolleyballCore
             if (digCard.Value >= deflectTarget)
             {
                 Narrate($"  Deflect: attacker side, {attacker.Name} card {digCard.Value}  ≥ {deflectTarget}  →  DUG");
+                Emit(new DeflectDigEvent(attacker.Name, digCard, deflectTarget, true));
                 return CardOutcome.Continue(attacker, defender, atkStrat, defStrat);
             }
 
             Narrate($"  Deflect: attacker side, {attacker.Name} card {digCard.Value}  < {deflectTarget}  →  NOT DUG, no chase");
+            Emit(new DeflectDigEvent(attacker.Name, digCard, deflectTarget, false));
             return CardOutcome.Ended(new RallyResult(
                 defender.Name,
                 $"Deflect not dug, no chase (target={deflectTarget}, dig={digCard.Value})",
@@ -621,6 +673,7 @@ namespace VolleyballCore
         {
             AttackOutcomeType outcome = AttackResolution.ResolveAttack(effectiveAttack, effectiveBlock);
             Narrate($"  Outcome: {outcome.ToString().ToUpperInvariant()}  (atk {effectiveAttack} vs blk {effectiveBlock})");
+            Emit(new AttackOutcomeEvent(attacker.Name, attackLane, ToShotKind(shot), outcome, effectiveAttack, effectiveBlock));
 
             if (outcome == AttackOutcomeType.Stuffed)
             {
@@ -709,6 +762,7 @@ namespace VolleyballCore
                     $"  Dig:     {defender.Name} card {digCard.Value}"
                     + (effectiveDig != digCard.Value ? $" (eff {effectiveDig})" : "")
                     + $"  ≥ {digTarget}  →  DUG");
+                Emit(new DigEvent(defender.Name, defenderRole, digCard, effectiveDig, digTarget, ToShotKind(shot), true, coverAttempted));
                 if (defender.AbilityEngine != null)
                 {
                     defender.AbilityEngine.RecordDigSuccess(defenderRole, DigType.Normal);
@@ -732,11 +786,13 @@ namespace VolleyballCore
                     if (coverAttempted && digCard.Value >= coverThreshold)
                     {
                         Narrate($"  Cover:   adjacent player reached (card {digCard.Value}) — no broken play");
+                        Emit(new BrokenPlayAvoidedEvent(defender.Name, "Cover"));
                         _brokenPlay = false;
                     }
                     else if (defender.PassiveAbility == "Safe Setter")
                     {
                         Narrate("  Passive: Safe Setter prevents broken play");
+                        Emit(new BrokenPlayAvoidedEvent(defender.Name, "Safe Setter"));
                         _brokenPlay = false;
                     }
                     else
@@ -758,6 +814,7 @@ namespace VolleyballCore
                 $"  Dig:     {defender.Name} card {digCard.Value}"
                 + (effectiveDig != digCard.Value ? $" (eff {effectiveDig})" : "")
                 + $"  < {digTarget}  →  NOT DUG, no chase");
+            Emit(new DigEvent(defender.Name, defenderRole, digCard, effectiveDig, digTarget, ToShotKind(shot), false, coverAttempted));
             return CardOutcome.Ended(new RallyResult(
                 attacker.Name,
                 $"Kill, no chase (attack={effectiveAttack} > block={effectiveBlock}, dig={digCard.Value})",
@@ -783,6 +840,7 @@ namespace VolleyballCore
                     $"  Dig:     {defender.Name} card {digCard.Value}"
                     + (effectiveDig != digCard.Value ? $" (eff {effectiveDig})" : "")
                     + $"  ≤ roll {effectiveAttack}  →  DUG");
+                Emit(new DigEvent(defender.Name, defenderRole, digCard, effectiveDig, effectiveAttack, ShotKind.Roll, true, false));
                 _brokenPlay = defenderRole == PlayerRole.Setter;
                 return CardOutcome.Continue(defender, attacker, defStrat, atkStrat);
             }
@@ -791,6 +849,7 @@ namespace VolleyballCore
                 $"  Dig:     {defender.Name} card {digCard.Value}"
                 + (effectiveDig != digCard.Value ? $" (eff {effectiveDig})" : "")
                 + $"  > roll {effectiveAttack}  →  NOT DUG, no chase");
+            Emit(new DigEvent(defender.Name, defenderRole, digCard, effectiveDig, effectiveAttack, ShotKind.Roll, false, false));
             return CardOutcome.Ended(new RallyResult(
                 attacker.Name,
                 $"Roll shot kill, no chase (roll={effectiveAttack}, dig={digCard.Value})",
@@ -863,6 +922,7 @@ namespace VolleyballCore
                     $"  Dig:     {defender.Name} card {digCard.Value}"
                     + (effectiveDig != digCard.Value ? $" (eff {effectiveDig})" : "")
                     + $"  ≥ {digTarget}  →  HEAVY SPIN DUG");
+                Emit(new DigEvent(defender.Name, defenderRole, digCard, effectiveDig, digTarget, ShotKind.HeavySpin, true, coverAttempted));
                 if (defender.AbilityEngine != null)
                 {
                     defender.AbilityEngine.RecordDigSuccess(defenderRole, DigType.Normal);
@@ -886,6 +946,7 @@ namespace VolleyballCore
                     if (coverAttempted && digCard.Value >= coverThreshold)
                     {
                         Narrate($"  Cover:   adjacent player reached (card {digCard.Value}) — no broken play");
+                        Emit(new BrokenPlayAvoidedEvent(defender.Name, "Cover"));
                         _brokenPlay = false;
                     }
                     else
@@ -904,6 +965,7 @@ namespace VolleyballCore
                 $"  Dig:     {defender.Name} card {digCard.Value}"
                 + (effectiveDig != digCard.Value ? $" (eff {effectiveDig})" : "")
                 + $"  < {digTarget}  →  NOT DUG (no chase)");
+            Emit(new DigEvent(defender.Name, defenderRole, digCard, effectiveDig, digTarget, ShotKind.HeavySpin, false, coverAttempted));
             return CardOutcome.Ended(new RallyResult(
                 attacker.Name,
                 $"Heavy spin not dug, no chase (attack={effectiveAttack}, dig={digCard.Value})",
@@ -925,6 +987,7 @@ namespace VolleyballCore
         {
             runningTotal += extraBonus + (team.AbilityEngine?.ChaseBonus() ?? 0);
             Narrate($"\n  Chase:   {team.Name}  need {targetValue}  starting at {runningTotal}");
+            Emit(new ChaseStartedEvent(team.Name, targetValue, runningTotal));
 
             for (int attempt = 1; attempt <= 2; attempt++)
             {
@@ -940,15 +1003,18 @@ namespace VolleyballCore
                 }
                 runningTotal += card.Value;
                 Narrate($"  Chase {attempt}: card {card.Value}  →  total {runningTotal} / {targetValue}");
+                Emit(new ChaseAttemptEvent(team.Name, attempt, card, runningTotal, targetValue));
 
                 if (runningTotal >= targetValue)
                 {
                     Narrate("  Chase:   SUCCEEDED");
+                    Emit(new ChaseEndedEvent(team.Name, true, runningTotal, targetValue));
                     return new ChaseResult(ChaseOutcome.Success);
                 }
             }
 
             Narrate($"  Chase:   FAILED  (total {runningTotal} < {targetValue})");
+            Emit(new ChaseEndedEvent(team.Name, false, runningTotal, targetValue));
             return new ChaseResult(ChaseOutcome.Failed);
         }
 
@@ -989,10 +1055,13 @@ namespace VolleyballCore
             return card;
         }
 
-        private (Card, SetTemplate) PhaseSet(Team team, IStrategy strat, int setValueDelta = 0)
+        private (Card Card, SetTemplate Template, int EffectiveValue, bool BrokenPlay, bool Blind) PhaseSet(
+            Team team, IStrategy strat, int setValueDelta = 0)
         {
             Card card;
-            if (team.Hand.Count > 0)
+            bool blind = team.Hand.Count == 0;
+            bool brokenPlay = _brokenPlay;
+            if (!blind)
             {
                 card = strat.ChooseSetCard(team.Hand, _brokenPlay);
                 team.PlayCard(card);
@@ -1023,7 +1092,7 @@ namespace VolleyballCore
             // Reset broken play flag after use
             _brokenPlay = false;
 
-            return (card, template);
+            return (card, template, effectiveValue, brokenPlay, blind);
         }
 
         /// <summary>
