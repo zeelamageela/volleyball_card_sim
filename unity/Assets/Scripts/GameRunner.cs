@@ -98,25 +98,17 @@ public class GameRunner : MonoBehaviour
     [SerializeField] private float serveContactBaselineOffset = 0f;
 
     [Header("Decision-hold pause points (fraction of that leg's own flight)")]
-    // How far through the serve->receiver leg the ball gets before easing into the
-    // slow-motion hold. Only applies when the human is the one receiving -- see
-    // ServeRegex's own stillPending check. This leg's reveal holds its own "Serve:"
-    // line back from the generic backlog flush specifically so this pause has an
-    // answer to actually wait for by the time it engages (see FlushNarrative's
-    // holdTrailingServeLine doc comment) -- without that, the UI couldn't show until
-    // this line's own processing (including the pause) already finished, defeating it.
+    // Every hold fraction below is how far into that leg the ball gets before holding
+    // -- and it only holds while a human decision is pending before the next touch
+    // (see ShouldHoldFlight), so the AI's own touches never pause.
+    // serve -> receiver, while the human chooses their receive card:
     [SerializeField] private float serveReceptionPauseFraction = 0.55f;
-    // Same idea for the receiver->setter leg (Team A's own set) -- this one's reveal is
-    // explicitly triggered post-gate (see RevealActiveRequest's own SetCardRequest
-    // case), with _activeRequest already correctly set to it, so the pause genuinely
-    // applies with no special handling needed.
-    // Late in the arc on purpose -- the pass's rebound off the receiver always plays
+    // pass -> setter, through the human's whole set/hit/lane chain (and the AI's pass
+    // through the human's block). Late in the arc on purpose -- the pass's rebound off the receiver always plays
     // out in full (it'll carry the reception animation), and the ball holds in flight
     // just short of the setter's hands, never on anyone's head.
     [SerializeField] private float setPauseFraction = 0.9f;
-    // Same idea for the failed-reception -> chaser leg -- this one's reveal ALSO holds
-    // its own trailing "Chase:" line back (see FlushNarrative's holdTrailingFlightLine
-    // doc comment), same reasoning as serveReceptionPauseFraction above.
+    // failed reception -> chaser, through every chase attempt:
     [SerializeField] private float chaseRecoveryPauseFraction = 0.55f;
     [SerializeField] private float freeBallBouncePeakHeight = 0.5f;
     // The rest of the "never pause on someone's head" holds -- each is the fraction of
@@ -156,8 +148,8 @@ public class GameRunner : MonoBehaviour
     [SerializeField] private float stuffedLandingPeakHeight = 0.5f;
     // NOT a floor landing despite living in this group (kept here so it stays next to
     // its siblings above) -- this is the peakHeight for the failed-reception -> chaser
-    // flight, a real, live, still-being-scrambled-for catch (see ChaseStartRegex
-    // below), just a short/flat one, same shape reasoning as the two heights above.
+    // flight, a real, live, still-being-scrambled-for catch (see
+    // PresentChaseStarted), just a short/flat one, same shape reasoning as the two heights above.
     [SerializeField] private float chaseLandingPeakHeight = 0.6f;
     // How far sideways (randomized left/right) a floor landing kicks away from the
     // player it's landing "near" -- confirmed live that landing exactly at the
@@ -169,11 +161,11 @@ public class GameRunner : MonoBehaviour
     // attack/dig for a given lane+card-parity flies to the exact same fixed point
     // (confirmed the root cause of "the ball is ALWAYS hit to the same spot").
     [SerializeField] private float placementVarianceRadius = 1.2f;
-    // Fraction applied to the digger's estimated remaining travel time (see the
-    // ResolveRegex branch below) -- less than 1 so the digger settles in just ahead of
+    // Fraction applied to the digger's estimated remaining travel time (see
+    // PresentResolve) -- less than 1 so the digger settles in just ahead of
     // the ball instead of at the same instant.
     [SerializeField] private float digApproachLeadFraction = 0.85f;
-    // Set once per Swing (see SwingRegex below) and reused for both the dig flight's
+    // Set once per Swing (see PresentSwing) and reused for both the dig flight's
     // target and the digger's own run destination, so the two always agree on where the
     // ball is actually going. A plain world-space XZ offset rather than one projected
     // through a team's local "right" direction (contrast deadBallLateralOffset) --
@@ -215,7 +207,7 @@ public class GameRunner : MonoBehaviour
     // Keyed by the attack's own card value (_lastAttackCardValue), the same way
     // serveArcHeightByCardValue is keyed by the serve's -- a harder-driven hit flies
     // flatter than a soft one, not the same lazy arc for every value. Tips are
-    // deliberately NOT run through this curve (see DigRegex below) -- a disguised
+    // deliberately NOT run through this curve (see FlyAttack) -- a disguised
     // soft shot reads as a real tip only if it keeps the existing, taller/slower
     // default arc, not a fast flat "hit" trajectory. Every hit is otherwise the
     // SAME plain, symmetric ballistic arc every time (see BallFlight.FlyTo) -- no
@@ -234,7 +226,7 @@ public class GameRunner : MonoBehaviour
     [SerializeField] private float setterReturnDuration = 0.6f;
     // How long a team's ease into Serve/Receive formation is given, and then explicitly
     // waited for, before the toss/flight that follows is allowed to start -- used by
-    // both PrepareServeFormationThenToss (the server's own team) and ServeRegex's own
+    // both PrepareServeFormationThenToss (the server's own team) and PresentServe's own
     // receiving-team ease. A flat, generous default rather than a computed "arrive just
     // ahead of the ball" lead time: both of these explicitly BLOCK on this duration now
     // (see "even if we need to wait for the characters to move" in each), so there's no
@@ -307,7 +299,6 @@ public class GameRunner : MonoBehaviour
     // to both teams and to every such line, not just AI ones -- a human's own lines get
     // exactly the same beat, it's just usually masked by their own decision time.
     [SerializeField] private float narrativeBeatDelay = 0.35f;
-    private bool _lineHadRealWait;
 
     // Fallback camera for any decision without its own dedicated phase camera (and the
     // camera shown at startup, before any decision is pending). Auto-found as
@@ -365,41 +356,10 @@ public class GameRunner : MonoBehaviour
     // "AIPlayers" group, which the temporary highlight/clear logic never touches.
     [SerializeField] private Color aiTeamColor = new(0.6f, 0.2f, 0.8f);
 
-    private static readonly Regex ServeRegex = new(@"Serve:\s+(\S+) card (\d+).*targeting (\w+)");
-    private static readonly Regex ReceiveRegex = new(@"Receive:\s+(\S+) card (\d+)");
-    private static readonly Regex SetRegex = new(@"Set:\s+(\S+) card (\d+)");
-    private static readonly Regex AttackRegex = new(@"Attack:\s+(\S+) lane (\d+) \S+\s+card (\d+)");
-    private static readonly Regex SwingRegex = new(@"Swing:\s+(\S+) lane (\d+) (\w+)");
-    private static readonly Regex RevealRegex = new(@"Reveal:\s+lane (\d+) blind draw.*card (\d+)");
-    private static readonly Regex BlockQuicksetRegex = new(@"Block:\s+Quick set lane (\d+).*card (\d+)");
-    // Captures both the receiving team's name and the actual back-row role Core chose
-    // for it (ChooseFreeBallTarget -- e.g. "Plain (Libero)") so the crossing can fly
-    // there for real instead of skipping straight to the next setter.
-    private static readonly Regex FreeBallRegex = new(@"mandatory free ball to (\S+) \((\w+)\)");
-    private static readonly Regex ResolveRegex = new(@"Resolve:\s+(\S+) lane (\d+) (\w+)\s+atk (\d+)");
-    // Narrated between Resolve: and Dig: (see Core/Rally.cs -- "hit", "tip", "roll",
-    // "heavy_spin", or "seam") -- read here so DigRegex's own flight below knows
-    // whether to fly the disguised-soft-shot arc (tip) or the flatter, harder one
-    // (everything else). See _lastShotWasTip's own comment.
-    private static readonly Regex ShotRegex = new(@"Shot:\s+(\w+)");
-    private static readonly Regex DigRegex = new(@"Dig:\s+(\S+) card (\d+)");
-    // The Chase *header* line specifically ("Chase:   Plain  need 8  starting at 3"),
-    // not the per-attempt "Chase 1: card N -> total X/Y" lines that follow it -- this is
-    // the only place Core narrates "need"/"starting at", so it can't collide with those.
-    // Narrated before ChooseChaseCard blocks (confirmed in Core/Rally.cs's PhaseChase),
-    // same ordering as Serve/Receive/Set -- see HandleLine's own branch for why that
-    // matters here.
-    private static readonly Regex ChaseStartRegex = new(@"Chase:\s+\S+\s+need\s+\d+\s+starting at\s+\d+");
-    // Each individual attempt's own line ("Chase 1: card 8  ->  total 17 / 10") -- the
-    // running total/target it already carries is enough to color that attempt's card
-    // green/red without waiting for the separate SUCCEEDED/FAILED line a few lines later.
-    private static readonly Regex ChaseAttemptRegex = new(@"Chase\s+\d+:\s+card\s+(\d+)\s+→\s+total\s+(\d+)\s*/\s*(\d+)");
     // An exact-tie hit deflects off the block back onto the ATTACKER's own side, and
     // that team digs it (Rally.ResolveOwnSideDeflect). Core names no digging role --
-    // presentation always sends it to that team's Libero (DeflectDigRole).
-    private static readonly Regex DeflectRegex = new(@"Deflect:\s+attacker side, (\S+) card (\d+)");
+    // presentation always sends it to that team's Libero.
     private const PlayerRole DeflectDigRole = PlayerRole.Libero;
-    private static readonly Regex StuffedRegex = new(@"Outcome:\s+STUFFED");
 
     private Transform _ball;
     private BallFlight _ballFlight;
@@ -411,7 +371,7 @@ public class GameRunner : MonoBehaviour
     private string _teamBName;
     private int _lastLane = -1;
     private int _lastAttackCardValue = -1;
-    // Set by ShotRegex, read by DigRegex's own flight -- tips keep the original,
+    // Set by the ShotEvent, read by the attack flight (FlyAttack) -- tips keep the original,
     // taller/slower default arc (a disguised soft shot shouldn't fly like a hard hit);
     // everything else ("hit", "roll", "heavy_spin", "seam" -- see Core/Rally.cs's own
     // shot-type strings) is a real driven attack and gets the flatter,
@@ -428,7 +388,7 @@ public class GameRunner : MonoBehaviour
     private string _lastAttackingTeam;
     // Which of the receiving team's two eligible-receiver roles (Ds/Libero -- the only
     // roles EligibleReceivers() ever returns) is chasing down a failed serve reception.
-    // Determined the instant Core's "Chase:" header line narrates (see HandleLine),
+    // Determined when the ChaseStartedEvent is presented (see PresentChaseStarted),
     // well before ChaseCardRequest itself goes active, so the highlight/hand-strip
     // reveal and the drag target are both already correct the moment the human sees it.
     private PlayerRole? _chaseRole;
@@ -475,56 +435,19 @@ public class GameRunner : MonoBehaviour
     // position. See PlayServeToss.
     private readonly HashSet<string> _tossingTeams = new();
     // Set the instant a human ServeRequest goes live (well before the serve card/target
-    // are chosen -- see the switch in RevealActiveRequest), so ServeRegex's own later
-    // handling of the "Serve:" line can just await this already-started toss instead of
-    // kicking off a second one. Cleared once ServeRegex consumes it. Stays null for an
-    // AI-served rally (no request, no early trigger), so ServeRegex's existing fallback
+    // are chosen -- see the switch in RevealActiveRequest), so PresentServe can just
+    // await this already-started toss instead of kicking off a second one. Cleared once
+    // PresentServe consumes it. Stays null for an AI-served rally (no request, no early
+    // trigger), so PresentServe's fallback
     // -- starting the toss itself -- is unchanged for that path.
     private Coroutine _pendingServeToss;
-    // True from the moment a "Serve:" line starts processing until the serve has
-    // actually reached its receiver. For an AI serve, the human's ReceiveRequest reveals
-    // alongside the toss (see FlushNarrative's holdTrailingFlightLine), so a quick
-    // answer can put SetCardRequest live before the serve is even struck -- and
-    // BallFlight.IsInFlight doesn't cover the toss, so MoveBallToSetterWhenReady would
-    // otherwise launch the set straight out of the server's toss. See that method.
-    private bool _serveInProgress;
-
-    // "Hold the ball in flight while this is true" conditions for every leg that leads
-    // into a human decision (see BallFlight._holdWhile). Flags rather than
-    // "_activeRequest is X" wherever the hold has to survive the gaps BETWEEN several
-    // chained decisions (Set -> Exchange -> HitCards -> AttackLane all happen before the
-    // setter touches the ball, the chase can take several attempts, a Cover attempt
-    // precedes its Dig) or has to be armed before the decision is actually revealed.
-    // Set as each request is taken off the channel (Update), cleared by the narrative
-    // line that proves the decision chain is over (ScanForStateUpdates) or by the
-    // answer itself (ResolveActiveRequest), and always by a rally-ending [Score] line.
-    private bool _holdForHumanAttack;
-    private bool _holdForBlock;
-    private bool _holdForTip;
-    private bool _holdForChase;
-    private bool _holdForDig;
-    // Set once the human's own dig flight has been launched early (at the Dig/Cover
-    // reveal, see PreLaunchHumanDig) so the "Dig:" line's own handler knows not to
-    // launch a second one.
-    private bool _digPreLaunched;
-    // Which team is attacking, as of the most recently FLUSHED (not yet necessarily
-    // played) narrative -- _lastAttackingTeam only updates at playback, too late for
-    // Update()'s own request-take bookkeeping.
-    private string _scanAttackingTeam;
-    // Whether the human's own receive/dig->setter leg has already been launched for
-    // the current set -- normally by SetCardRequest's reveal, but Core skips that
-    // request entirely when the set card is drawn blind (empty hand), in which case
-    // the "Set:" line itself has to launch it (see SetRegex).
-    private bool _humanSetLegStarted;
-
     private HumanDecisionChannel _channel;
     private List<string> _narrative;
     // Typed, ordered record of the whole game -- Rally's own events plus the human's
     // decision prompts (DecisionRecordingStrategy) and each rally's score, all in the
-    // order Core actually ran them. Written on the game's background thread. Not read
-    // by presentation yet: it's the replacement being built for narrative parsing.
+    // order Core actually ran them. Written on the game's background thread; walked in
+    // order by RunPresentation. The narrative text is only logged to the console now.
     private RallyEventLog _events;
-    private int _narrativeReadIndex;
     private Task<string> _gameTask;
     private bool _resultLogged;
 
@@ -536,11 +459,6 @@ public class GameRunner : MonoBehaviour
 
     // Currently-displayed decision (null = none) and its in-progress sub-state.
     private object _activeRequest;
-    // Every request taken off the channel stashes here first and waits for whatever
-    // narrative was already sitting unflushed to finish animating before its own UI
-    // shows -- see Update() for why this applies unconditionally, and RevealAfterFlush
-    // for the actual wait.
-    private object _pendingReveal;
     private Card? _servePendingCard;
     private List<(int Lane, Card Card, AttackPosition Position)> _hitPlacements;
     private Dictionary<PlayerRole, (int Lane, Card Card)> _blockPlacements;
@@ -654,6 +572,7 @@ public class GameRunner : MonoBehaviour
         // so it's safe to run the whole game loop, including HumanStrategy's
         // blocking waits, off the main thread.
         _gameTask = Task.Run(() => RunGame(teamA, teamB, humanStrategy, aiStrategy, seedRng));
+        StartCoroutine(RunPresentation());
     }
 
     /// <summary>
@@ -701,46 +620,12 @@ public class GameRunner : MonoBehaviour
 
     private void Update()
     {
-        if (_activeRequest == null && _pendingReveal == null && _channel != null && _channel.TryTakePending(out object req))
-        {
-            // Every request type goes through the same stash-flush-wait-then-reveal
-            // path, unconditionally -- confirmed live, one request type at a time
-            // (Block, then Serve, then SetCard, then ChaseCard), that whichever type
-            // gets special-cased as "reveal immediately" is exactly the one that
-            // eventually turns out to have SOME path where real narrative (and the
-            // ball flight tied to it) is still sitting unflushed the instant this
-            // request is taken off the channel: Core's background thread narrates each
-            // phase's own header/result line and then, whenever the NEXT decision
-            // belongs to the AI (or the same team that just acted), keeps running
-            // synchronously with no yield -- so an arbitrarily long backlog of
-            // AI-only lines (and their flights: chase recoveries, free-ball crossings,
-            // reception/set legs) can pile up between one human decision and the next.
-            // Revealing the next request immediately raced that backlog's own
-            // animation every time. FlushNarrative() itself is always safe to call
-            // unconditionally (a no-op, returning a null Coroutine, when there's
-            // nothing new) -- so gating universally costs nothing when there's no
-            // backlog (RevealAfterFlush reveals on the very next tick, same as the old
-            // immediate path effectively did) and fixes every future case of this same
-            // bug at once instead of chasing it request type by request type.
-            //
-            // ReceiveRequest holds back its own trailing "Serve:" line specifically
-            // (see FlushNarrative's own doc comment) -- unlike every other type, its
-            // own triggering line carries a flight that's meant to pause and visibly
-            // wait for this very answer, which can only happen if that line's
-            // animation runs AFTER (not as a prerequisite to) revealing.
-            _pendingReveal = req;
-            Coroutine playback = FlushNarrative(holdTrailingFlightLine: req is ReceiveRequest or ChaseCardRequest);
-            // Armed right after the flush's own synchronous scan (which may clear
-            // stale flags off a [Score] line) and before any flight it just started
-            // can reach its pause point.
-            ArmHoldForRequest(req);
-            StartCoroutine(RevealAfterFlush(playback));
-        }
+        LogNewNarrative();
 
         if (_gameTask != null && _gameTask.IsCompleted && !_resultLogged)
         {
             _resultLogged = true;
-            FlushNarrative(); // safe: background thread has fully finished
+            LogNewNarrative();
             ClearAllHighlights();
             ClearFloatingNumbers();
             ClearHandStrip();
@@ -757,19 +642,16 @@ public class GameRunner : MonoBehaviour
 
     /// <summary>
     /// Does everything that makes a decision actually visible/actionable: claims
-    /// _activeRequest, flushes narrative, applies highlights, cuts the phase camera,
-    /// populates the hand strip, sets prompt text / shows buttons, and (for BlockCards)
-    /// starts the slow-motion hold. Called immediately from Update() for every request
-    /// type except BlockCardsRequest and ServeRequest, which stash themselves in
-    /// _pendingReveal and call this later instead, once whatever narrative had already
-    /// piled up by the time they were taken off the channel has actually finished
-    /// playing -- see Update()'s own comment on each for why.
+    /// _activeRequest, applies highlights, cuts the phase camera, populates the hand
+    /// strip, sets prompt text / shows buttons, and (for BlockCards with nothing in
+    /// flight) starts the slow-motion hold. Called by PresentDecision when the
+    /// presentation loop reaches this decision in the event stream -- everything that
+    /// happened before it has already been presented.
     /// </summary>
     private void RevealActiveRequest(object req)
     {
         _activeRequest = req;
         ResetPerRequestState();
-        FlushNarrative(); // safe: background thread is now confirmed blocked in Post() (no-op if already flushed, e.g. for a deferred Block reveal)
         ApplyHighlightsForRequest(req);
         // Must run before PopulateHandStrip -- it switches to this decision's phase
         // camera, and PopulateHandStrip reads whichever camera is active right now
@@ -801,25 +683,14 @@ public class GameRunner : MonoBehaviour
             case ChaseCardRequest chaseReq:
                 SetPromptText($"Choose a chase card (need {chaseReq.TargetValue - chaseReq.RunningTotal} more, total {chaseReq.RunningTotal}):");
                 break;
-            case FreeBallDiscardRequest:
-                // Purely cosmetic -- Core itself never tracks who on the recovering
-                // side actually redirects the ball before it crosses, so this invents
-                // a target (any teammate other than the chaser, chosen at random) so
-                // the ball visibly moves off the chaser instead of sitting dead.
-                // Holds late in the bounce (freeBallDiscardPauseFraction) for this
-                // decision rather than landing on the teammate and sitting there --
-                // the "never pause on someone's head" rule overrides the earlier
-                // choice to play this bounce straight through.
-                StartCoroutine(PlayFreeBallDiscardBounce());
-                break;
             case HitCardsRequest:
                 SetPromptText("Drag cards onto your attackers:");
                 ShowDoneButton("Done", () => (object)(_hitPlacements ?? new List<(int, Card, AttackPosition)>()));
                 break;
             case BlockCardsRequest:
                 // Blind commit, ahead of the attacker's final lane. Normally the AI's
-                // own pass is still held in flight toward its setter (SetRegex,
-                // _holdForBlock), and that held flight drives the slow-motion itself;
+                // own pass is still held in flight toward its setter (see
+                // ShouldHoldFlight), and that held flight drives the slow-motion itself;
                 // only if the ball genuinely isn't moving does this need its own
                 // standalone hold (see the header comment above decisionHoldRampDuration).
                 if (_ballFlight == null || !_ballFlight.IsInFlight)
@@ -837,38 +708,11 @@ public class GameRunner : MonoBehaviour
                 break;
         }
 
-        // Unlike the Serve->Receive leg (whose "Serve:" narrative line is written
-        // BEFORE ChooseReceiveCard runs in Core, so HandleLine's regex-driven
-        // MoveBallTo naturally starts while the decision is still pending), PhaseSet
-        // calls ChooseSetCard BEFORE appending its "Set:" line -- by the time that
-        // line exists and HandleLine would see it, the human has already answered,
-        // too late to still pause and wait for it. Trigger the flight here instead,
-        // the moment the request itself goes live, so the pause genuinely happens
-        // before the answer exists. Only team A ever produces a request (the AI
-        // resolves synchronously with no request), so this is always the human's own
-        // setter -- the AI's own Set leg still relies on the narrative line below.
-        if (req is DigCardRequest or CoverAttemptRequest && _holdForDig && !_digPreLaunched)
-        {
-            _digPreLaunched = true;
-            StartCoroutine(PreLaunchHumanDig());
-        }
-
-        if (req is SetCardRequest)
-        {
-            _humanSetLegStarted = true;
-            StartCoroutine(MoveBallToSetterWhenReady());
-        }
-
-        // Same "trigger the instant the request itself goes live" reasoning as
-        // SetCardRequest above, for the opposite end of a rally: ServeRequest only ever
-        // exists for a human server (team A -- the AI resolves ChooseServe synchronously
-        // with no request at all), and it's posted the moment PhaseServe calls
-        // ChooseServe, well before Core's "Serve:" line is narrated (that only happens
-        // once this request is answered). Waiting for that line, like the rest of the
-        // Serve handling in HandleLine still does, meant the receiving team sat frozen
-        // in last rally's positions for however long the human took to actually choose
-        // their serve card/target -- exactly the "nobody has moved" complaint this
-        // fixes. Neither the toss nor the receiving team's formation needs to know the
+        // ServeRequest only ever exists for a human server (team A), and comes BEFORE
+        // the ServeEvent (which only exists once this is answered) -- waiting for that
+        // event meant the receiving team sat frozen in last rally's positions for
+        // however long the human took to choose their serve -- exactly the "nobody has
+        // moved" complaint this fixes. Neither the toss nor the receiving team's formation needs to know the
         // eventual card/target: the toss is just a vertical hop-and-catch at the
         // server's own spot, and Receive formation is a fixed team shape, not aimed at
         // whichever role ends up targeted.
@@ -877,14 +721,14 @@ public class GameRunner : MonoBehaviour
             // Same early-trigger reasoning as the formation/toss lines above -- the
             // previous rally's floating labels (a dig's transferred number, lingering
             // "X" attackers, etc.) would otherwise sit on screen through this entire
-            // decision, since HandleLine's own ClearFloatingNumbers doesn't run until
-            // the "Serve:" line exists, which requires this very choice to already be
+            // decision, since PresentServe's own ClearFloatingNumbers doesn't run until
+            // the ServeEvent exists, which requires this very choice to already be
             // answered. Confirmed live: without this, "Choose a card to serve" showed
             // straight through last rally's leftover numbers.
             ClearFloatingNumbers();
             // The RECEIVING team already eased into shape here -- but the SERVING team
             // itself only ever got an instant SnapTeamToFormation, and only once
-            // "Serve:" narrates, which (per the reasoning above) is well after this
+            // the ServeEvent arrives, which (per the reasoning above) is well after this
             // reveal and entirely at the mercy of the human's own answer speed. Every
             // player who isn't the setter -- the ones PlayServeToss itself repositions
             // -- just sat wherever the PREVIOUS rally's Attack/Dig formation left them
@@ -896,51 +740,6 @@ public class GameRunner : MonoBehaviour
             // until that settle time has genuinely elapsed, not just hoping it beats
             // the toss+decision time by luck.
             _pendingServeToss = StartCoroutine(PrepareServeFormationThenToss());
-        }
-    }
-
-    /// <summary>
-    /// Waits for a just-flushed narrative batch to finish animating (playback is null
-    /// when there was nothing new to wait for), then reveals whichever request was
-    /// staged alongside it -- see Update()'s own comment on why every request type
-    /// goes through this unconditionally.
-    /// </summary>
-    private void ArmHoldForRequest(object req)
-    {
-        switch (req)
-        {
-            case SetCardRequest:
-                _holdForHumanAttack = true;
-                break;
-            case BlockCardsRequest:
-                _holdForBlock = true;
-                break;
-            case TipOrHitRequest:
-                _holdForTip = true;
-                break;
-            case ChaseCardRequest:
-                _holdForChase = true;
-                break;
-            case DigCardRequest or CoverAttemptRequest:
-                // Either the opponent's attack coming over, or (human attacking) the
-                // human's own hit deflecting back off the block -- both get a flight
-                // that holds partway (PreLaunchHumanDig).
-                _holdForDig = true;
-                break;
-        }
-    }
-
-    private IEnumerator RevealAfterFlush(Coroutine playback)
-    {
-        if (playback != null)
-        {
-            yield return playback;
-        }
-        if (_pendingReveal != null)
-        {
-            object toReveal = _pendingReveal;
-            _pendingReveal = null;
-            RevealActiveRequest(toReveal);
         }
     }
 
@@ -1266,10 +1065,10 @@ public class GameRunner : MonoBehaviour
     {
         _hitPlacements ??= new List<(int, Card, AttackPosition)>();
         _hitPlacements.Add((lane, card, position));
-        // Live, the instant the card lands -- not the real value (see AttackRegex's
-        // own "X" for why), and not waiting on Core's own "Attack:" narrative line,
-        // which only exists once every placement in this HitCardsRequest is
-        // submitted together.
+        // Live, the instant the card lands -- not the real value (see
+        // PresentAttackCommit's own "X" for why), and not waiting on Core's own
+        // AttackCommitEvents, which only exist once every placement in this
+        // HitCardsRequest is submitted together.
         SetFloatingLabel(_teamAName, role, "X", Color.white);
         HighlightHitOptions(request);
         UpdateHitTrajectoryPreviews(request);
@@ -1302,7 +1101,7 @@ public class GameRunner : MonoBehaviour
                 // formula (needs _lastLane, only ever set by an attack's own Resolve:
                 // line) that's meaningless here: a chase only ever follows a failed
                 // SERVE reception, before any attack has happened this rally at all.
-                // _chaseRole (set off the "Chase:" header line -- see HandleLine) is the
+                // _chaseRole (set off the ChaseStartedEvent -- see PresentChaseStarted) is the
                 // real answer.
                 if (_chaseRole.HasValue)
                 {
@@ -1317,9 +1116,9 @@ public class GameRunner : MonoBehaviour
                 break;
             case HitCardsRequest hitReq:
                 // The human's own attack phase starting -- same one-shot "all other
-                // numbers disappear" wipe AttackRegex does for the AI's side, just
+                // numbers disappear" wipe PresentAttackCommit does for the AI's side, just
                 // triggered here instead since these placements happen live via drag,
-                // well before any "Attack:" narrative line exists for them.
+                // well before any AttackCommitEvent exists for them.
                 if (!_attackPhaseCleared)
                 {
                     ClearFloatingNumbers();
@@ -1329,12 +1128,12 @@ public class GameRunner : MonoBehaviour
                 UpdateHitTrajectoryPreviews(hitReq);
                 break;
             case AttackLaneRequest laneReq:
-                // Same one-shot "all other numbers disappear" wipe AttackRegex/
+                // Same one-shot "all other numbers disappear" wipe PresentAttackCommit/
                 // HitCardsRequest's own reveal already do -- needed as a fallback here
                 // too for a fully forced-blind exchange (every lane blind-drawn, no
                 // hand cards left on either side): neither of those two triggers ever
-                // fires then (no HitCardsRequest goes out, and blind-drawn Attack:
-                // lines don't match AttackRegex at all -- see its own comment), so
+                // fires then (no HitCardsRequest goes out, and blind-drawn AttackCommits
+                // commits carry no card to label -- see PresentAttackCommit), so
                 // without this a stale label (confirmed live: the Set's own tempo
                 // name) can still be sitting on screen once lane selection begins.
                 if (!_attackPhaseCleared)
@@ -1622,7 +1421,7 @@ public class GameRunner : MonoBehaviour
     // "Free Ball", a tempo name) hovering above whichever player or the ball just
     // became relevant, colored to carry meaning (green/red for success/failure, a
     // tempo's own color for a set, plain white otherwise) -- driven off the same
-    // narrative lines that already drive ball movement, see HandleLine below. Cleared
+    // rally events that already drive ball movement, see PresentEvent. Cleared
     // at each phase boundary the user's own spec calls out (a fresh serve, an attack
     // crossing over for a dig, a free ball crossing, and the Set->Attack transition),
     // so only the exchange currently in flight is ever showing.
@@ -1710,16 +1509,6 @@ public class GameRunner : MonoBehaviour
         if (_activeRequest is AttackLaneRequest && response is int lane)
         {
             _lastChosenAttackLane = lane;
-        }
-        // Held flights release themselves off their own holdWhile conditions (see
-        // BallFlight._holdWhile) -- these two are the ones answered directly.
-        if (_activeRequest is BlockCardsRequest)
-        {
-            _holdForBlock = false;
-        }
-        if (_activeRequest is TipOrHitRequest)
-        {
-            _holdForTip = false;
         }
         _channel.Resolve(response);
         _activeRequest = null;
@@ -2175,900 +1964,703 @@ public class GameRunner : MonoBehaviour
         return map;
     }
 
-    /// <summary>
-    /// Returns the Coroutine playing the freshly-flushed batch back (or null if there
-    /// was nothing new) -- callers that need to know when this batch's animation has
-    /// actually finished (see _pendingReveal in Update()) can yield on it directly.
-    /// </summary>
-    /// <summary>
-    /// holdTrailingFlightLine: for ReceiveRequest and ChaseCardRequest's own gate
-    /// cycle only (see Update()) -- each is always posted the instant Core narrates
-    /// THIS rally's own "Serve: ..." / "Chase:   ... starting at ..." line (PhaseServe/
-    /// PhaseChase narrates it, then immediately calls ChooseReceiveCard/ChooseChaseCard
-    /// with no yield in between), so that line is always the very last thing sitting
-    /// unflushed by the time this fires. Flushing it here, as part of the SAME backlog
-    /// batch this gate awaits before revealing, would mean the whole
-    /// Serve+Reception/Chase-start+recovery sequence -- formation settle (Serve only),
-    /// toss, the flight itself -- has to fully finish before the human ever sees the
-    /// question, starving that flight's own mid-air pause-and-wait-for-an-answer hold
-    /// of anything to actually wait for. So: hold that one trailing line back (don't
-    /// advance _narrativeReadIndex past it) when set, leaving it for
-    /// RevealActiveRequest's own unconditional FlushNarrative() call (which runs
-    /// immediately after _activeRequest is finally set to this request) to pick up and
-    /// animate -- concurrently with the now-revealed decision UI, exactly like
-    /// ServeRequest/SetCardRequest's own early-triggered legs already work. Genuine
-    /// prior backlog (the previous rally's own tail) still flushes and awaits normally
-    /// either way.
-    /// </summary>
-    private Coroutine FlushNarrative(bool holdTrailingFlightLine = false)
+    // -- Event presentation --------------------------------------------------------
+    //
+    // Presentation is driven by Core's typed event stream (_events), walked strictly
+    // in order by ONE loop (RunPresentation): each event's handler runs to completion
+    // before the next starts, and a DecisionRequestedEvent reveals the human's prompt
+    // and waits for the answer right there in sequence. Core always runs ahead of this
+    // loop up to the human's next decision, so the whole stretch of the rally up to
+    // that decision is already sitting in the log -- which is what lets every flight
+    // decide whether to hold by looking ahead (see ShouldHoldFlight) instead of via
+    // per-decision flags.
+    //
+    // Ball flights never block the loop (they'd deadlock against their own hold);
+    // they're queued (QueueFlight) so each starts only once the previous one has
+    // finished, and handlers that need the ball to have actually arrived wait on the
+    // specific flight's handle.
+
+    /// <summary>One queued ball flight's progress.</summary>
+    private sealed class FlightHandle
     {
-        if (_narrativeReadIndex >= _narrative.Count)
+        public bool Started;
+        public bool Done;
+    }
+
+    // Index (in _events) of the event currently being presented -- the loop only
+    // advances past an event once its handler has finished.
+    private int _presentIndex;
+    private FlightHandle _lastQueuedFlight;
+    // The receive/dig/free-ball -> setter pass currently in progress (SetEvent waits
+    // for it to have started before moving the setting team, see PresentSet).
+    private FlightHandle _setterPass;
+    // The flight carrying the attack into the defense (kill -> digger, deflection ->
+    // the attacker's own Libero); DigEvent/DeflectDigEvent finish it off.
+    private FlightHandle _attackFlight;
+    // The chase recovery flight -- ChaseEndedEvent either lets it land or runs it on
+    // through to the floor.
+    private FlightHandle _chaseFlight;
+    private int _narrativeLogIndex;
+
+    private static bool IsBallEvent(RallyEvent e) =>
+        e is ServeEvent or ReceiveEvent or ChaseStartedEvent or ChaseEndedEvent or FreeBallDiscardEvent
+            or FreeBallEvent or SwingEvent or AttackOutcomeEvent or DigEvent or DeflectDigEvent or RallyEndedEvent;
+
+    /// <summary>
+    /// The one hold rule: a flight launched while presenting event launchIndex holds
+    /// at its pause point when a human decision sits between that event and the next
+    /// ball event -- until the loop actually reaches that next ball event (i.e. the
+    /// whole decision chain is answered and presented). No decision ahead (an AI-only
+    /// stretch) means no hold at all. The next ball event may not exist yet (Core is
+    /// blocked on the very decision in question), which counts as not reached.
+    /// </summary>
+    private bool ShouldHoldFlight(int launchIndex)
+    {
+        bool decisionAhead = false;
+        for (int i = launchIndex + 1; _events.TryGet(i, out RallyEvent e); i++)
         {
-            return null;
+            if (e is DecisionRequestedEvent)
+            {
+                decisionAhead = true;
+            }
+            else if (IsBallEvent(e))
+            {
+                return decisionAhead && _presentIndex < i;
+            }
         }
-        var newLines = _narrative.Skip(_narrativeReadIndex).ToList();
-        _narrativeReadIndex = _narrative.Count;
-        if (holdTrailingFlightLine && newLines.Count > 0
-            && (ServeRegex.IsMatch(newLines[^1].Trim()) || ChaseStartRegex.IsMatch(newLines[^1].Trim())))
+        return decisionAhead;
+    }
+
+    /// <summary>Whether a human decision comes before the next ball event after index.</summary>
+    private bool HumanDecisionBeforeNextBallEvent(int index)
+    {
+        for (int i = index + 1; _events.TryGet(i, out RallyEvent e); i++)
         {
-            _narrativeReadIndex--;
-            newLines.RemoveAt(newLines.Count - 1);
+            if (e is DecisionRequestedEvent)
+            {
+                return true;
+            }
+            if (IsBallEvent(e))
+            {
+                return false;
+            }
         }
-        if (newLines.Count == 0)
+        return false;
+    }
+
+    private Func<bool> HoldForDecisionsAfter(int launchIndex) => () => ShouldHoldFlight(launchIndex);
+
+    private FlightHandle QueueFlight(Func<IEnumerator> flight)
+    {
+        var handle = new FlightHandle();
+        FlightHandle previous = _lastQueuedFlight;
+        _lastQueuedFlight = handle;
+        StartCoroutine(RunQueuedFlight(handle, previous, flight));
+        return handle;
+    }
+
+    private IEnumerator RunQueuedFlight(FlightHandle handle, FlightHandle previous, Func<IEnumerator> flight)
+    {
+        if (previous != null)
         {
-            return null;
+            yield return new WaitUntil(() => previous.Done);
+        }
+        handle.Started = true;
+        yield return flight();
+        handle.Done = true;
+    }
+
+    private IEnumerator WaitForQueuedFlights()
+    {
+        FlightHandle last = _lastQueuedFlight;
+        if (last != null)
+        {
+            yield return new WaitUntil(() => last.Done);
+        }
+    }
+
+    /// <summary>
+    /// A miss: the given flight carries on along its own arc through the player it was
+    /// heading for, into the floor (BallFlight.RunThroughToFloor) -- or, if it already
+    /// landed on them, drops to the floor beside them.
+    /// </summary>
+    private IEnumerator RunFlightThroughToFloor(FlightHandle flight, string team, PlayerRole role)
+    {
+        if (flight == null)
+        {
+            yield break;
+        }
+        yield return new WaitUntil(() => flight.Started);
+        if (!flight.Done)
+        {
+            _ballFlight?.RunThroughToFloor(floorLandingHeight);
+            yield return new WaitUntil(() => flight.Done);
+        }
+        else if (_teamPositions.TryGetValue(team, out var positions) && positions.TryGetValue(role, out Transform target))
+        {
+            yield return QueueFlightAndWait(() => MoveBallToFloorPosition(target, stuffedLandingPeakHeight));
+        }
+    }
+
+    private IEnumerator QueueFlightAndWait(Func<IEnumerator> flight)
+    {
+        FlightHandle handle = QueueFlight(flight);
+        yield return new WaitUntil(() => handle.Done);
+    }
+
+    private string Opponent(string team) => team == _teamAName ? _teamBName : _teamAName;
+
+    private void LogNewNarrative()
+    {
+        if (_narrative == null)
+        {
+            return;
+        }
+        List<string> newLines;
+        lock (_narrative)
+        {
+            if (_narrativeLogIndex >= _narrative.Count)
+            {
+                return;
+            }
+            newLines = _narrative.GetRange(_narrativeLogIndex, _narrative.Count - _narrativeLogIndex);
+            _narrativeLogIndex = _narrative.Count;
         }
         foreach (string line in newLines)
         {
             Debug.Log(line);
         }
-        ScanForStateUpdates(newLines); // synchronous, so highlighting can use the result immediately -- ball movement below is animated instead
-        return StartCoroutine(PlayLines(newLines));
+    }
+
+    private IEnumerator RunPresentation()
+    {
+        while (true)
+        {
+            if (!_events.TryGet(_presentIndex, out RallyEvent e))
+            {
+                if (_gameTask != null && _gameTask.IsCompleted)
+                {
+                    yield break;
+                }
+                yield return null;
+                continue;
+            }
+            yield return PresentEvent(e);
+            _presentIndex++;
+        }
+    }
+
+    private IEnumerator PresentEvent(RallyEvent rallyEvent)
+    {
+        switch (rallyEvent)
+        {
+            case DecisionRequestedEvent decision:
+                yield return PresentDecision(decision);
+                break;
+            case ServeEvent serve:
+                yield return PresentServe(serve);
+                break;
+            case ReceiveEvent receive:
+                PresentReceive(receive);
+                break;
+            case ChaseStartedEvent chaseStarted:
+                PresentChaseStarted(chaseStarted);
+                break;
+            case ChaseAttemptEvent attempt:
+                if (_chaseRole.HasValue)
+                {
+                    SetFloatingLabel(attempt.Team, _chaseRole.Value, attempt.Card.Value.ToString(),
+                        attempt.RunningTotal >= attempt.TargetValue ? floatingSuccessColor : floatingFailureColor);
+                }
+                break;
+            case ChaseEndedEvent chaseEnded:
+                yield return PresentChaseEnded(chaseEnded);
+                break;
+            case FreeBallEvent freeBall:
+                yield return PresentFreeBall(freeBall);
+                break;
+            case SetEvent set:
+                yield return PresentSet(set);
+                break;
+            case AttackCommitEvent commit:
+                PresentAttackCommit(commit);
+                break;
+            case BlockCommitEvent block:
+                PresentBlockCommit(block);
+                break;
+            case SwingEvent swing:
+                PresentSwing(swing);
+                break;
+            case RevealEvent reveal:
+                if (PlayerRoleExtensions.LaneToRole.TryGetValue(reveal.Lane, out PlayerRole revealRole))
+                {
+                    SetFloatingNumber(reveal.Team, revealRole, reveal.Card.Value);
+                }
+                break;
+            case ResolveEvent resolve:
+                PresentResolve(resolve);
+                break;
+            case ShotEvent shot:
+                _lastShotWasTip = shot.Shot == ShotKind.Tip;
+                break;
+            case AttackOutcomeEvent outcome:
+                yield return PresentAttackOutcome(outcome);
+                break;
+            case DigEvent dig:
+                yield return PresentDig(dig);
+                break;
+            case DeflectDigEvent deflect:
+                yield return PresentDeflectDig(deflect);
+                break;
+            case RallyEndedEvent:
+                // The last ball movement (a kill, a stuff, an ace) plays out in full,
+                // then one beat before the next rally starts.
+                yield return WaitForQueuedFlights();
+                yield return new WaitForSeconds(narrativeBeatDelay);
+                break;
+            // RallyStarted, FreeBallDiscard (the bounce already launched at
+            // ChaseEnded), Combo/ComboCardStuffed, Passive/BrokenPlayAvoided and
+            // GameScore (the scoreboard reads the live score) are text-only.
+        }
     }
 
     /// <summary>
-    /// Cheap, synchronous pass over freshly-flushed narrative lines to keep the
-    /// dig-role/serve-target tracking fields current *immediately*, since
-    /// ApplyHighlightsForRequest needs them the moment a request is taken -- it can't
-    /// wait on PlayLines' animated coroutine, which spreads the same lines out over
-    /// several frames for ball movement.
+    /// Reveals the human's prompt for this decision and waits for the answer. Core
+    /// posts the request the instant after emitting this event, so it's always there
+    /// (or about to be).
     /// </summary>
-    private void ScanForStateUpdates(List<string> lines)
+    private IEnumerator PresentDecision(DecisionRequestedEvent decision)
     {
-        foreach (string rawLine in lines)
+        object request;
+        while (!_channel.TryTakePending(out request))
         {
-            string line = rawLine.Trim();
-            Match m;
-            if ((m = ServeRegex.Match(line)).Success)
-            {
-                string serverTeam = m.Groups[1].Value;
-                if (serverTeam != _teamAName && Enum.TryParse(m.Groups[3].Value, ignoreCase: true, out PlayerRole role))
-                {
-                    _lastServeTargetRole = role;
-                }
-            }
-            else if ((m = ResolveRegex.Match(line)).Success)
-            {
-                _lastLane = int.Parse(m.Groups[2].Value);
-                _lastAttackCardValue = int.Parse(m.Groups[4].Value);
-            }
-            else if ((m = SetRegex.Match(line)).Success || (m = AttackRegex.Match(line)).Success)
-            {
-                _scanAttackingTeam = m.Groups[1].Value;
-                if (line.StartsWith("Set:") && _scanAttackingTeam == _teamAName)
-                {
-                    // Covers the blind-drawn set too (no SetCardRequest to arm this);
-                    // a Swing: later in this same flush clears it again.
-                    _holdForHumanAttack = true;
-                }
-            }
-            else if ((m = SwingRegex.Match(line)).Success)
-            {
-                _scanAttackingTeam = m.Groups[1].Value;
-                if (_scanAttackingTeam == _teamAName)
-                {
-                    // The human's lane is final -- the set can finally reach the setter.
-                    _holdForHumanAttack = false;
-                }
-            }
-            else if (line.StartsWith("Chase:") && (line.Contains("SUCCEEDED") || line.Contains("FAILED")))
-            {
-                _holdForChase = false;
-            }
-            else if ((m = DigRegex.Match(line)).Success && m.Groups[1].Value == _teamAName && _holdForDig)
-            {
-                _holdForDig = false;
-                if (_digPreLaunched && line.Contains("NOT DUG"))
-                {
-                    // A miss -- the held flight carries straight on through the
-                    // digger to the floor along its own arc (no second flight, so no
-                    // change of direction).
-                    _ballFlight?.RunThroughToFloor(floorLandingHeight);
-                }
-            }
-            else if ((m = DeflectRegex.Match(line)).Success && m.Groups[1].Value == _teamAName && _holdForDig)
-            {
-                _holdForDig = false;
-                if (_digPreLaunched && line.Contains("NOT DUG"))
-                {
-                    _ballFlight?.RunThroughToFloor(floorLandingHeight);
-                }
-            }
-            else if (line.StartsWith("[Score]"))
-            {
-                _holdForHumanAttack = false;
-                _holdForBlock = false;
-                _holdForTip = false;
-                _holdForChase = false;
-                _holdForDig = false;
-                // A miss's own Dig:/Deflect: line (always flushed alongside this one)
-                // drops the ball to the floor the same way whether or not it was
-                // pre-launched, so this safety reset can't strand anything.
-                _digPreLaunched = false;
-            }
+            yield return null;
+        }
+        if (!DecisionMatchesRequest(decision.Kind, request))
+        {
+            Debug.LogWarning($"GameRunner: decision event {decision.Kind} doesn't match request {request.GetType().Name}");
+        }
+        RevealActiveRequest(request);
+        yield return new WaitUntil(() => _activeRequest == null);
+    }
+
+    private static bool DecisionMatchesRequest(DecisionKind kind, object request) => kind switch
+    {
+        DecisionKind.Serve => request is ServeRequest,
+        DecisionKind.Receive => request is ReceiveRequest,
+        DecisionKind.Set => request is SetCardRequest,
+        DecisionKind.Exchange => request is ExchangeCardRequest,
+        DecisionKind.HitCards => request is HitCardsRequest,
+        DecisionKind.Block => request is BlockCardsRequest,
+        DecisionKind.AttackLane => request is AttackLaneRequest,
+        DecisionKind.TipOrHit => request is TipOrHitRequest,
+        DecisionKind.Cover => request is CoverAttemptRequest,
+        DecisionKind.Dig => request is DigCardRequest,
+        DecisionKind.Chase => request is ChaseCardRequest,
+        DecisionKind.FreeBallDiscard => request is FreeBallDiscardRequest,
+        _ => false,
+    };
+
+    private IEnumerator PresentServe(ServeEvent serve)
+    {
+        int launchIndex = _presentIndex;
+        string serverTeam = serve.Team;
+        string receiverTeam = Opponent(serverTeam);
+        _lastServeCardValue = serve.Card.Value;
+        _lastServeTargetRole = serve.Target;
+        _pendingReceiveTeam = receiverTeam;
+        _pendingReceiveRole = serve.Target;
+        _chaseRole = null;
+        ClearFloatingNumbers(); // the ball crosses the net on every serve
+        SetFloatingLabelOnBall(serve.Card.Value.ToString(), Color.white);
+        CutToPhaseCameraIfIdle("Serve");
+        // Sweeps up anything left over from the previous rally regardless of how it
+        // ended (e.g. a stuffed block ends the rally before Swing culls down to one).
+        HideAllTrajectoryPreviewsExcept(null);
+
+        if (_pendingServeToss == null)
+        {
+            // An AI serve: snap both teams straight into their pre-serve shape -- the
+            // receivers are already standing in their reception stance long before the
+            // toss, so there's nothing to visibly animate before contact. (A human
+            // serve already did this while the serve card was being chosen -- see
+            // PrepareServeFormationThenToss -- and its toss is already underway, so
+            // snapping the server here would teleport them mid-approach.)
+            SnapTeamToFormation(serverTeam, "Serve");
+            SnapTeamToFormation(receiverTeam, "Receive");
+            yield return WaitForQueuedFlights();
+        }
+        yield return AwaitServeToss(serverTeam);
+
+        // The serve launches the instant the toss reaches contact. The receivers were
+        // snapped into Receive shape before the toss, so only the Setter's peel-off
+        // toward its Set spot is a real move here -- it isn't receiving, so its actual
+        // job (setting) starts the moment the serve is struck.
+        ApplyTeamFormation(receiverTeam, "Receive", null, receiveFormationLeadDuration);
+        if (_teamPositions.TryGetValue(receiverTeam, out var receiverPositions)
+            && receiverPositions.TryGetValue(PlayerRole.Setter, out Transform receiverSetterT))
+        {
+            MovePlayerTo(receiverSetterT, GetFormationPosition(receiverTeam, PlayerRole.Setter, "Set"), receiveFormationLeadDuration);
+        }
+
+        float serveHeight = serveArcHeightByCardValue.Evaluate(serve.Card.Value);
+        float serveSpeed = serveArcSpeedByCardValue.Evaluate(serve.Card.Value);
+        PlayerRole target = serve.Target;
+        QueueFlight(() => MoveBallTo(receiverTeam, target, serveHeight, serveSpeed,
+            pauseAtFraction: serveReceptionPauseFraction, holdWhile: HoldForDecisionsAfter(launchIndex),
+            destinationOverride: GetReceiveContactPoint(receiverTeam, target), contactHeight: receiveContactHeight,
+            allowBounce: false));
+    }
+
+    private void PresentReceive(ReceiveEvent receive)
+    {
+        SetFloatingLabel(receive.Team, receive.Passer, receive.Card.Value.ToString(),
+            receive.Clean ? floatingSuccessColor : floatingFailureColor);
+        if (receive.Clean)
+        {
+            // The pass rebounds straight off the passer toward the setter -- it never
+            // sits on the passer's head. A failed pass waits for ChaseStarted instead.
+            LaunchPassToSetter(receive.Team, _presentIndex);
         }
     }
 
-    private IEnumerator PlayLines(List<string> lines)
+    /// <summary>
+    /// The pass from whoever just played the ball (passer, digger, free-ball receiver)
+    /// to the setter, holding just short of the setter's hands for as long as the
+    /// human's set/hit/lane (or, for the AI's pass, block) decisions are pending.
+    /// Moves both teams into shape the moment the pass leaves: the setting team to Set,
+    /// the other to Dig.
+    /// </summary>
+    private void LaunchPassToSetter(string team, int launchIndex)
     {
-        foreach (string rawLine in lines)
+        string other = Opponent(team);
+        Func<bool> hold = HoldForDecisionsAfter(launchIndex);
+        _setterPass = QueueFlight(() => PassToSetter(team, other, hold));
+    }
+
+    private IEnumerator PassToSetter(string team, string other, Func<bool> hold)
+    {
+        ApplyTeamFormation(team, "Set", null, setterReturnDuration);
+        ApplyTeamFormation(other, "Dig", null, setterReturnDuration);
+        yield return MoveBallTo(team, PlayerRole.Setter, receiveToSetPeakHeight, receiveToSetLateralSpeed,
+            pauseAtFraction: setPauseFraction, holdWhile: hold,
+            destinationOverride: GetSetContactPoint(team), allowBounce: false, contactHeight: setContactHeight);
+    }
+
+    private void PresentChaseStarted(ChaseStartedEvent chase)
+    {
+        CutToPhaseCameraIfIdle("Dig");
+        if (!_pendingReceiveRole.HasValue)
         {
-            string line = rawLine.Trim();
-            if (line.Length > 0)
+            return;
+        }
+        _chaseRole = GetAdjacentChaseRole(_pendingReceiveRole.Value);
+        PlayerRole chaser = _chaseRole.Value;
+        string team = chase.Team;
+        Func<bool> hold = HoldForDecisionsAfter(_presentIndex);
+        // Holds through every chase attempt (the next ball event is ChaseEnded).
+        _chaseFlight = QueueFlight(() => MoveBallTo(team, chaser, chaseLandingPeakHeight,
+            pauseAtFraction: chaseRecoveryPauseFraction, holdWhile: hold,
+            contactHeight: digContactHeight, allowBounce: false));
+    }
+
+    private IEnumerator PresentChaseEnded(ChaseEndedEvent chase)
+    {
+        if (!chase.Succeeded)
+        {
+            // An ace: the scramble doesn't get there -- the ball carries on through
+            // the chaser into the floor.
+            if (_chaseRole.HasValue)
             {
-                // A human receiver can answer mid-toss (the ReceiveRequest reveals
-                // alongside an AI serve), and every decision after that narrates in a
-                // NEW batch running concurrently with the still-unfinished Serve line's
-                // own -- confirmed live that the Set/Chase/free-ball lines then played
-                // out before the serve was even struck (whole team leaving for Set
-                // shape, the server leaving the baseline mid-toss). Nothing that comes
-                // after a serve may start until that serve reaches its receiver. The
-                // Serve line's own batch never waits on itself: its later lines only
-                // run once HandleLine below has already cleared the flag.
-                if (_serveInProgress)
-                {
-                    yield return new WaitUntil(() => !_serveInProgress);
-                }
-                yield return HandleLine(line);
-                // The ball is never left sitting on someone while text plays out --
-                // only a finished rally ([Score]) gets a narrative beat.
-                if (!_lineHadRealWait && line.StartsWith("[Score]"))
-                {
-                    yield return new WaitForSeconds(narrativeBeatDelay);
-                }
+                yield return RunFlightThroughToFloor(_chaseFlight, chase.Team, _chaseRole.Value);
             }
+            yield break;
+        }
+        // Recovered: the chaser bounces it to a teammate (Core names nobody -- any
+        // teammate other than the chaser, picked at random), holding late in that
+        // bounce while the human pays the free ball's discard.
+        if (!_chaseRole.HasValue || !_teamPositions.TryGetValue(chase.Team, out var positions))
+        {
+            yield break;
+        }
+        PlayerRole chaser = _chaseRole.Value;
+        var candidates = positions.Keys.Where(role => role != chaser).ToList();
+        if (candidates.Count == 0)
+        {
+            yield break;
+        }
+        PlayerRole target = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+        string team = chase.Team;
+        Func<bool> hold = HoldForDecisionsAfter(_presentIndex);
+        QueueFlight(() => MoveBallTo(team, target, freeBallBouncePeakHeight,
+            pauseAtFraction: freeBallDiscardPauseFraction, holdWhile: hold,
+            contactHeight: digContactHeight, allowBounce: false));
+    }
+
+    private IEnumerator PresentFreeBall(FreeBallEvent freeBall)
+    {
+        ClearFloatingNumbers();
+        SetFloatingLabelOnBall("Free Ball", Color.white);
+        // Scrambled defense, not a serve reception -- Dig formation/camera. The
+        // receiving team's Setter heads straight for its Set spot (the receiver is
+        // always Ds/Libero, never the Setter).
+        CutToPhaseCameraIfIdle("Dig");
+        string team = freeBall.ToTeam;
+        PlayerRole receiver = freeBall.Receiver;
+        ApplyTeamFormation(team, "Dig", null, receiveFormationLeadDuration);
+        if (_teamPositions.TryGetValue(team, out var positions) && positions.TryGetValue(PlayerRole.Setter, out Transform setterT))
+        {
+            MovePlayerTo(setterT, GetFormationPosition(team, PlayerRole.Setter, "Set"), receiveFormationLeadDuration);
+        }
+        yield return QueueFlightAndWait(() => MoveBallTo(team, receiver, allowBounce: false));
+        LaunchPassToSetter(team, _presentIndex);
+    }
+
+    private IEnumerator PresentSet(SetEvent set)
+    {
+        string team = set.Team;
+        _lastAttackingTeam = team;
+        _lastSetCardValue = set.Card.Value;
+        string tempoLabel = GetTempoLabel(set.Card.Value);
+        if (team != _teamAName)
+        {
+            CutToPhaseCameraIfIdle("Set");
+        }
+        // The pass to this setter moves both teams into Set/Dig shape when it leaves;
+        // this set's tempo-specific moves below have to come after that, not be undone
+        // by it.
+        FlightHandle pass = _setterPass;
+        if (pass != null)
+        {
+            yield return new WaitUntil(() => pass.Started);
+        }
+        SetFloatingLabel(team, PlayerRole.Setter, tempoLabel, GetTempoColor(tempoLabel));
+        // Cleared once, by the attack phase's first sign (the human's HitCards reveal
+        // or the AI's first AttackCommit) -- see _attackPhaseCleared.
+        _attackPhaseCleared = false;
+
+        ApplyTeamFormation(Opponent(team), "Dig", null, setterReturnDuration);
+        ApplyTeamFormation(team, "Set", null, setterReturnDuration);
+        // This team's eligible attackers (everyone but Setter/Libero) start toward this
+        // tempo's approach waypoint the instant the set is called, well before the lane.
+        if (_teamPositions.TryGetValue(team, out var attackPrepPositions))
+        {
+            foreach (var kv in attackPrepPositions)
+            {
+                if (kv.Key == PlayerRole.Setter || kv.Key == PlayerRole.Libero)
+                {
+                    continue;
+                }
+                MovePlayerTo(kv.Value, GetFormationPosition(team, kv.Key, "AttackPrep", tempoLabel), setterReturnDuration);
+            }
+        }
+        // When a human decision (hit cards, block) is next, let everyone settle before
+        // it's revealed -- the ball is held in the air meanwhile, so this costs nothing
+        // visually. Otherwise don't wait: the ball would just land and sit.
+        if (HumanDecisionBeforeNextBallEvent(_presentIndex))
+        {
+            yield return new WaitForSeconds(setterReturnDuration);
         }
     }
 
-    private IEnumerator HandleLine(string line)
+    private void PresentAttackCommit(AttackCommitEvent commit)
     {
-        _lineHadRealWait = false;
-        Match m;
-        if ((m = ServeRegex.Match(line)).Success)
+        _lastAttackingTeam = commit.Team;
+        CutToPhaseCameraIfIdle("Attack"); // first sign this exchange has reached the hitting phase
+        // A blind-drawn card shows nothing until its Reveal.
+        if (!commit.Card.HasValue || !PlayerRoleExtensions.LaneToRole.TryGetValue(commit.Lane, out PlayerRole role))
         {
-            string serverTeam = m.Groups[1].Value;
-            string receiverTeam = serverTeam == _teamAName ? _teamBName : _teamAName;
-            _serveInProgress = true;
-            int serveCardValue = int.Parse(m.Groups[2].Value);
-            _lastServeCardValue = serveCardValue; // read later by the receiver->setter leg's reception-height lookup
-            float serveHeight = serveArcHeightByCardValue.Evaluate(serveCardValue);
-            float serveSpeed = serveArcSpeedByCardValue.Evaluate(serveCardValue);
-            ClearFloatingNumbers(); // the ball crosses the net on every serve
-            SetFloatingLabelOnBall(serveCardValue.ToString(), Color.white);
-            CutToPhaseCameraIfIdle("Serve");
-            _lineHadRealWait = true;
-
-            if (Enum.TryParse(m.Groups[3].Value, ignoreCase: true, out PlayerRole role))
-            {
-                _pendingReceiveTeam = receiverTeam;
-                _pendingReceiveRole = role;
-                _chaseRole = null; // a new rally's own Chase: line (if any) sets this fresh
-
-                // Snap BOTH teams instantly into their pre-serve shape (Serve/Receive, or
-                // base if nothing's been authored -- see GetFormationPosition's
-                // fallback) before this serve's own toss -- PlayServeToss records
-                // "normal position to restore to" off the server's Setter transform the
-                // moment it starts, so if anything is still mid-transition from the
-                // previous rally (e.g. the last exchange's Receive/Attack shape), that
-                // capture would be wrong. An instant snap, not an eased eye-catching
-                // move: confirmed live that skipping the receiver's own snap here (on
-                // the theory that "nobody moves until contact" should cover them too)
-                // left them sitting in whatever formation the PREVIOUS rally ended in
-                // -- scattered and wrong -- for the entire serve card decision, since
-                // nothing eases them into Receive until after contact. Real volleyball
-                // receivers are already standing in their reception stance long before
-                // the toss; this reproduces that instantly rather than animating it, so
-                // the ONLY visible movement before contact is still nothing at all --
-                // the receiving team's own eased eases after AwaitServeToss below (and
-                // the Setter's peel-off within it) become a no-op tween from an anchor
-                // to itself for everyone except the Setter, who's the one real motion
-                // this sequence is actually about.
-                SnapTeamToFormation(serverTeam, "Serve");
-                SnapTeamToFormation(receiverTeam, "Receive");
-                // Sweeps up anything left over from the previous rally regardless of how
-                // it ended (e.g. a stuffed block, which ends the rally before Swing ever
-                // gets a chance to cull down to one) -- a new rally always starts with a
-                // clean slate. Deliberately not in ResetPerRequestState: that fires on
-                // every single decision reveal, including the human's own Block reveal
-                // mid-rally, which would wipe the AI's committed-lane arcs at exactly the
-                // moment they're needed.
-                HideAllTrajectoryPreviewsExcept(null);
-
-                // Nobody on the receiving side EASES anywhere until the server actually
-                // makes contact -- they're already correctly positioned (the instant
-                // snap above), so there's nothing left to visibly animate until then
-                // anyway. AwaitServeToss (PlayServeToss/TossTo) is what carries the
-                // toss's own pause-at-the-peak for a pending human ServeRequest, so
-                // waiting for it here means the one real move left (the Setter's
-                // peel-off to Set, below) can't even START until that decision is
-                // answered and contact is made.
-                yield return AwaitServeToss(serverTeam);
-
-                // The serve launches the instant the toss reaches contact -- the ball
-                // must never hang in the air at the contact point. The receiving team
-                // was already snapped into Receive shape before the toss (above, or in
-                // PrepareServeFormationThenToss for a human serve), so this ease is a
-                // no-op for everyone except the Setter's peel-off below, which plays
-                // out alongside the serve's own flight rather than ahead of it.
-                ApplyTeamFormation(receiverTeam, "Receive", null, receiveFormationLeadDuration);
-                if (_teamPositions.TryGetValue(receiverTeam, out var earlyPositions) && earlyPositions.TryGetValue(PlayerRole.Setter, out Transform earlySetterT))
-                {
-                    // The Setter doesn't linger at its Receive spot -- it's not the one
-                    // receiving, so its actual job (setting) starts right after this same
-                    // reception. Send it straight on to its Set anchor instead, on the
-                    // same wait budget, overriding the bulk move the line above just
-                    // started for it specifically (MovePlayerTo preempts cleanly
-                    // per-transform). This is "the setter can start to move the instant
-                    // contact is made" -- it's already moving by the time this line even
-                    // runs, since AwaitServeToss above only just returned.
-                    MovePlayerTo(earlySetterT, GetFormationPosition(receiverTeam, PlayerRole.Setter, "Set"), receiveFormationLeadDuration);
-                }
-
-                // Pause partway there and hold (slow-motion, not a stop) until the
-                // receive card is actually chosen -- see ResolveActiveRequest. Only when
-                // the human is the one receiving -- the AI decides instantly and never
-                // resolves through that path, so pausing for it would hang forever. This
-                // leg's reveal deliberately runs concurrently with this animation (see
-                // FlushNarrative's holdTrailingFlightLine doc comment), so
-                // _activeRequest is already correctly set to this ReceiveRequest by the
-                // time holdWhile checks it here -- no more racing the reveal the way
-                // this used to when every request's own triggering line was fully
-                // animated BEFORE it could reveal. Same "controlled contact, not a
-                // ground bounce" reasoning already applied to the Setter's and hitter's
-                // own arrivals for allowBounce; destinationOverride/contactHeight route
-                // this through the same real reception point (reaching forward,
-                // waist-height) GetSetContactPoint/GetAttackContactPoint already use for
-                // their own phases, instead of the generic ballHeight fallback landing
-                // dead-center over the receiver's head.
-                float servePause = receiverTeam == _teamAName ? serveReceptionPauseFraction : -1f;
-                yield return MoveBallToWhenReady(receiverTeam, role, peakHeight: serveHeight, lateralSpeed: serveSpeed,
-                    pauseAtFraction: servePause, holdWhile: () => _activeRequest is ReceiveRequest,
-                    destinationOverride: GetReceiveContactPoint(receiverTeam, role), contactHeight: receiveContactHeight,
-                    allowBounce: false);
-            }
-            else
-            {
-                yield return AwaitServeToss(serverTeam);
-            }
-            _serveInProgress = false;
+            return;
         }
-        else if ((m = ReceiveRegex.Match(line)).Success)
+        if (!_attackPhaseCleared)
         {
-            // The Receive line itself doesn't name a role -- it's whoever the
-            // preceding Serve line targeted, captured above. Success/failure isn't in
-            // a capture group -- "clean pass" vs "FAILED" is literal text on the same
-            // line, same convention the Dig:/Outcome: STUFFED lines already use elsewhere.
-            if (_pendingReceiveRole.HasValue)
-            {
-                bool receiveSuccess = line.Contains("clean pass");
-                SetFloatingLabel(_pendingReceiveTeam, _pendingReceiveRole.Value, m.Groups[2].Value,
-                    receiveSuccess ? floatingSuccessColor : floatingFailureColor);
-            }
-            // No narrative beat after this line: the pass rebounds straight off the
-            // receiver toward the setter (Set line) or the chaser (Chase line) -- the
-            // ball never sits on the receiver's head.
-            _lineHadRealWait = true;
-        }
-        else if (ChaseStartRegex.IsMatch(line))
-        {
-            CutToPhaseCameraIfIdle("Dig");
-            _lineHadRealWait = true;
-            if (_pendingReceiveRole.HasValue && _pendingReceiveTeam != null)
-            {
-                _chaseRole = GetAdjacentChaseRole(_pendingReceiveRole.Value);
-                // Genuinely pause mid-flight for the chase decision, same as every
-                // other live-decision flight (Serve->Receive, Set->Attack) -- this
-                // used to fly the ball to MoveBallToFloorPosition, a DEAD-ball
-                // landing (offset away from the chaser, never caught) that also
-                // fully completed BEFORE ChaseCardRequest even revealed (this
-                // line's own reveal now holds it back -- see FlushNarrative's
-                // holdTrailingFlightLine doc comment), instead of pausing
-                // concurrently with the decision the way it's meant to read: the
-                // ball is still live, still being scrambled for, not already dead
-                // on the floor.
-                float chasePause = _pendingReceiveTeam == _teamAName ? chaseRecoveryPauseFraction : -1f;
-                yield return MoveBallToWhenReady(_pendingReceiveTeam, _chaseRole.Value, peakHeight: chaseLandingPeakHeight,
-                    contactHeight: digContactHeight, pauseAtFraction: chasePause,
-                    holdWhile: () => _holdForChase, allowBounce: false);
-            }
-        }
-        else if ((m = ChaseAttemptRegex.Match(line)).Success)
-        {
-            // Each attempt's own card value, colored by whether THIS attempt's running
-            // total already reached the target -- no need to wait for the separate
-            // "Chase: SUCCEEDED/FAILED" line a couple lines later, it's the exact same
-            // comparison Core itself makes.
-            if (_pendingReceiveTeam != null && _chaseRole.HasValue)
-            {
-                bool chaseSuccess = int.Parse(m.Groups[2].Value) >= int.Parse(m.Groups[3].Value);
-                SetFloatingLabel(_pendingReceiveTeam, _chaseRole.Value, m.Groups[1].Value,
-                    chaseSuccess ? floatingSuccessColor : floatingFailureColor);
-            }
-        }
-        else if ((m = SetRegex.Match(line)).Success)
-        {
-            string team = m.Groups[1].Value;
-            _lastAttackingTeam = team;
-            int setValue = int.Parse(m.Groups[2].Value);
-            _lastSetCardValue = setValue;
-            string setTempoLabel = GetTempoLabel(setValue);
-            SetFloatingLabel(team, PlayerRole.Setter, setTempoLabel, GetTempoColor(setTempoLabel));
-            // The attack phase itself hasn't visually started yet -- the next thing
-            // either team does (the human's own HitCardsRequest reveal, or the AI's
-            // first "Attack:" line) wipes this and every other lingering label, exactly
-            // once. See _attackPhaseCleared's own comment.
-            _attackPhaseCleared = false;
-
-            // Team X setting means team Y is about to defend (block/dig) -- release
-            // whichever of team Y's players are still out of position from their own
-            // last turn on offense back to a defensive-ready (Dig) formation.
-            string opponentTeam = team == _teamAName ? _teamBName : _teamAName;
-            ApplyTeamFormation(opponentTeam, "Dig", null, setterReturnDuration);
-
-            // Team X itself (who just received/dug and is now setting) eases into its
-            // own Set formation -- covers both the initial post-serve-reception set and
-            // any later mid-rally set after a dig, and subsumes the old digger-only
-            // reset (that role just gets its Set-phase position like everyone else).
-            ApplyTeamFormation(team, "Set", null, setterReturnDuration);
-
-            // This team's own eligible attackers (everyone except Setter/Libero, same
-            // exclusion as GridPlayer.CanAttack()) start easing toward this set's own
-            // tempo's approach waypoint the instant the set itself is called -- well
-            // before the specific attack lane is even chosen -- instead of sitting at
-            // their generic Set-phase spot until the real Attack-phase anchor snaps
-            // them into their final swing position later (see AttackRegex below).
-            // Overrides the Set-phase move just above for these specific roles
-            // (MovePlayerTo preempts cleanly per-transform, same early-release pattern
-            // as the Setter's own moves elsewhere in this file).
-            if (_teamPositions.TryGetValue(team, out var attackPrepPositions))
-            {
-                foreach (var kv in attackPrepPositions)
-                {
-                    if (kv.Key == PlayerRole.Setter || kv.Key == PlayerRole.Libero)
-                    {
-                        continue;
-                    }
-                    MovePlayerTo(kv.Value, GetFormationPosition(team, kv.Key, "AttackPrep", setTempoLabel), setterReturnDuration);
-                }
-            }
-
-            // Genuinely await both eases before anything downstream (HitCardsRequest's
-            // own gate, in particular) can reveal -- previously fire-and-forget. That
-            // was mostly hidden for the AI's own Set leg below, whose real flight yield
-            // happens to run about as long as setterReturnDuration, but the human's own
-            // Set leg has no flight here at all (that one's already well underway via
-            // SetCardRequest's own early-triggered MoveBallToSetterWhenReady -- see
-            // RevealActiveRequest), so this line's own processing used to finish
-            // instantly, letting HitCardsRequest reveal before either team's tween had
-            // time to settle -- exactly "blockers should be ready already" not holding
-            // true. Same "even if we need to wait for the characters to move" fix as
-            // every other phase transition this pass.
-            _lineHadRealWait = true;
-            if (team == _teamAName)
-            {
-                if (!_humanSetLegStarted)
-                {
-                    // Blind-drawn set: no SetCardRequest ever launched the pass to the
-                    // setter -- confirmed live that the ball otherwise sat on the
-                    // digger through the whole AttackLane decision and then flew
-                    // straight to the hitter, skipping the setter entirely.
-                    StartCoroutine(MoveBallToSetterWhenReady(applyFormations: false));
-                }
-                _humanSetLegStarted = false;
-                yield return new WaitForSeconds(setterReturnDuration);
-            }
-            else
-            {
-                // Team A's flight to the setter was already kicked off the moment the
-                // SetCardRequest went live (see Update()) -- by the time this line
-                // exists, the human has already answered. The AI team has no such
-                // request, so this narrative line remains its only trigger, and it
-                // never pauses (the AI decides instantly). The flight starts right
-                // away, alongside the formation eases rather than after them -- the
-                // pass rebounds straight off the receiver, never sitting on their head
-                // (the Setter itself already peeled off toward its Set spot at serve
-                // contact / dig, so it isn't racing this flight). Whatever's left of
-                // the ease budget is still waited out afterward, so the settle
-                // guarantee above holds for anything downstream.
-                //
-                // Launched in the background, not awaited: if the human's Block is the
-                // next decision (_holdForBlock, armed when it was taken), this pass
-                // holds just short of the AI setter's hands for the whole decision
-                // rather than landing and sitting there -- and the rest of this batch
-                // (the AI's own Attack: lines, whose committed-lane arcs the Block
-                // decision needs on screen) has to keep playing meanwhile so the Block
-                // can actually reveal. Anything that flies the ball next (Swing) waits
-                // for this flight to finish on its own (MoveBallToWhenReady).
-                CutToPhaseCameraIfIdle("Set");
-                StartCoroutine(MoveBallToWhenReady(team, PlayerRole.Setter,
-                    peakHeight: receiveToSetPeakHeight, lateralSpeed: receiveToSetLateralSpeed,
-                    pauseAtFraction: setPauseFraction, holdWhile: () => _holdForBlock,
-                    destinationOverride: GetSetContactPoint(team), allowBounce: false, contactHeight: setContactHeight));
-                if (_holdForBlock)
-                {
-                    // Only worth waiting out the formation settle when the ball is
-                    // genuinely held for the Block -- the human's own blockers should be
-                    // in place by the time it reveals. Otherwise the ball would just
-                    // land on the setter and sit through this wait.
-                    yield return new WaitForSeconds(setterReturnDuration);
-                }
-            }
-        }
-        else if ((m = AttackRegex.Match(line)).Success)
-        {
-            // Blind-drawn attack cards don't match this regex (no "card N" in that
-            // line) -- their number only appears later, off the Reveal line below,
-            // matching "as they're selected or revealed."
-            string team = m.Groups[1].Value;
-            _lastAttackingTeam = team;
-            int lane = int.Parse(m.Groups[2].Value);
-            CutToPhaseCameraIfIdle("Attack"); // first sign this exchange has reached the hitting phase
-            if (PlayerRoleExtensions.LaneToRole.TryGetValue(lane, out PlayerRole role))
-            {
-                // "All other numbers disappear" the instant the attack phase itself
-                // begins -- exactly once per exchange (a multi-attacker set narrates
-                // several of these Attack: lines in a row, only the first should wipe
-                // anything). The human's own side reaches this same one-shot clear via
-                // HitCardsRequest's own reveal instead (see ApplyHighlightsForRequest),
-                // since their placements happen live via drag, well before any of these
-                // narrative lines exist.
-                if (!_attackPhaseCleared)
-                {
-                    ClearFloatingNumbers();
-                    _attackPhaseCleared = true;
-                }
-                // Not the real card value -- an attacker's actual strength is exactly
-                // what Block is about to guess at; showing "X" (both teams, for visual
-                // consistency) marks a committed hitter without revealing it.
-                SetFloatingLabel(team, role, "X", Color.white);
-
-                // The AI's own committed lanes -- shown the instant each one narrates,
-                // not hypothetically like the human's own open HitCards options, since
-                // these are real cards the AI has actually played. This is exactly the
-                // information the human needs to make their own Block decision, and
-                // it's safe to reveal now: Block always resolves before Swing narrates
-                // (Core/Rally.cs), so nothing here can still change by the time this is
-                // seen. The human's own committed lanes get the same treatment via
-                // UpdateHitTrajectoryPreviews instead, so this is AI-only.
-                if (team != _teamAName)
-                {
-                    string tempoLabel = GetTempoLabel(_lastSetCardValue);
-                    ShowTrajectoryPreview(role,
-                        GetSetContactPoint(team) + Vector3.up * setContactHeight,
-                        GetAttackContactPoint(team, role, tempoLabel) + Vector3.up * attackContactHeight,
-                        trajectorySelectedColor, GetFormationPeakHeight(team, role, "Attack", tempoLabel));
-                }
-            }
-        }
-        else if ((m = SwingRegex.Match(line)).Success)
-        {
-            // Fires the instant the final (post-SlideLanes) attack lane/role is known --
-            // well before Resolve: (which only exists once tip-or-hit and block/dig
-            // resolution already happened) -- so the ball leaves the setter's head and
-            // starts flying to the actual hitter right away, for both teams, instead of
-            // sitting static through the whole hitter-choice sequence.
-            string team = m.Groups[1].Value;
-            CutToPhaseCameraIfIdle("Attack"); // harmless if Attack: already set this -- blind-drawn attacks skip that line entirely
-            // Fresh placement offset for this swing -- reused unchanged for both the dig
-            // flight's target (DigRegex below) and the digger's own run destination, so
-            // the ball and the defender are always aiming at the identical point.
-            float angle = UnityEngine.Random.value * Mathf.PI * 2f;
-            float radius = Mathf.Sqrt(UnityEngine.Random.value) * placementVarianceRadius; // sqrt for uniform area density, not just uniform radius
-            _pendingAttackOffset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
-            if (Enum.TryParse(m.Groups[3].Value, ignoreCase: true, out PlayerRole role))
-            {
-                string tempoLabel = GetTempoLabel(_lastSetCardValue);
-                Vector3 setterPos = GetSetContactPoint(team);
-                Vector3 hitterDestination = GetAttackContactPoint(team, role, tempoLabel);
-                float hitterPeakHeight = GetFormationPeakHeight(team, role, "Attack", tempoLabel);
-
-                // Whole team eases into its Attack-phase formation for this set's tempo
-                // -- the swinging hitter's own authored anchor IS their approach/
-                // step-back position now (author it a bit further back and it does the
-                // same job the old single-hitter step-back mechanism did). Timed off
-                // how long the ball will actually take to get there (same lead-time
-                // treatment as the Setter's own serve-reception run and the digger's
-                // run to the ball), not a flat guess, so the hitter lands on the set
-                // instead of arriving early or late.
-                float hitterDuration = EstimateSetToHitterDuration(team, role, tempoLabel) * hitterMoveLeadFraction;
-                ApplyTeamFormation(team, "Attack", tempoLabel, hitterDuration);
-
-                // The Setter's job for this exchange ends the instant the ball leaves
-                // for the hitter -- peel off toward defense right away instead of
-                // waiting for the whole team's later Dig-formation trigger (which only
-                // fires once the opponent sets again, well after this exchange has
-                // already resolved). Overrides the Attack-phase move the line above
-                // just started for the Setter specifically.
-                if (_teamPositions.TryGetValue(team, out var releasedPositions) && releasedPositions.TryGetValue(PlayerRole.Setter, out Transform releasedSetterT))
-                {
-                    MovePlayerTo(releasedSetterT, GetFormationPosition(team, PlayerRole.Setter, "Dig"), setterReturnDuration);
-                }
-
-                _lineHadRealWait = true;
-                // The final lane's chosen -- drop every other option this exchange was
-                // showing (open hit-card options, the AI's other committed lanes,
-                // whatever's left from AttackLaneRequest) down to just this one.
-                HideAllTrajectoryPreviewsExcept(role);
-                ShowTrajectoryPreview(role, setterPos + Vector3.up * setContactHeight, hitterDestination + Vector3.up * attackContactHeight,
-                    trajectorySelectedColor, hitterPeakHeight);
-                // Same reasoning as the Setter's own two arrivals (Serve->Setter,
-                // Set->Setter) -- the hitter doesn't catch and hold either, they swing
-                // on it essentially the instant it arrives, so a landing bounce here
-                // reads as wrong/jarring rather than a clean strike.
-                //
-                // Launched in the background, not awaited: the human's TipOrHit
-                // decision (if it comes) is posted only after the Resolve: line that
-                // follows this one in the same batch, and can't reveal until the batch
-                // finishes -- awaiting here would either deadlock against its own hold
-                // or land the ball on the hitter first. Anything that flies the ball
-                // next (a dig, a stuff, a kill) waits for this flight on its own.
-                StartCoroutine(FlySwing(team, role, hitterDestination, hitterPeakHeight));
-            }
-        }
-        else if ((m = RevealRegex.Match(line)).Success)
-        {
-            int lane = int.Parse(m.Groups[1].Value);
-            if (_lastAttackingTeam != null && PlayerRoleExtensions.LaneToRole.TryGetValue(lane, out PlayerRole role))
-            {
-                SetFloatingNumber(_lastAttackingTeam, role, int.Parse(m.Groups[2].Value));
-            }
-        }
-        else if ((m = BlockQuicksetRegex.Match(line)).Success)
-        {
-            // Only the forced blind single-blocker case narrates an exact per-card
-            // value -- a normal multi-card block only ever reports a lane total (see
-            // the Resolve line below), so that case isn't shown here at all, and a
-            // normal AI block has no earlier narrative signal to cut to Block on.
-            CutToPhaseCameraIfIdle("Block");
-            int lane = int.Parse(m.Groups[1].Value);
-            // LaneToDefendingRole, not LaneToRole -- this number belongs to the
-            // DEFENDING team's own physical blocker for this lane, which (courts being
-            // mirrored) is a different role than whichever attacker plays that same
-            // lane number on their own side.
-            if (_lastAttackingTeam != null && PlayerRoleExtensions.LaneToDefendingRole.TryGetValue(lane, out PlayerRole role))
-            {
-                string defendingTeam = _lastAttackingTeam == _teamAName ? _teamBName : _teamAName;
-                SetFloatingNumber(defendingTeam, role, int.Parse(m.Groups[2].Value));
-            }
-        }
-        else if ((m = FreeBallRegex.Match(line)).Success)
-        {
-            // A broken-dig recovery sends a mandatory free ball across the net without
-            // ever narrating a "Dig:" line -- still a real net crossing, so it gets a
-            // real flight of its own, same as a serve reception: from wherever the
-            // ball currently sits (the chasing team's own recovery spot, left there by
-            // ChaseStartRegex's own MoveBallToWhenReady above) to the actual back-row
-            // role Core picked (freeBallTarget.Role -- always Ds or Libero, see
-            // Team.EligibleReceivers), not a silent teleport straight to next
-            // exchange's setter. No specific card value is tied to the crossing
-            // itself; the recovering team's own Set/Attack lines add their numbers
-            // next.
             ClearFloatingNumbers();
-            SetFloatingLabelOnBall("Free Ball", Color.white);
-            // A free ball is scrambled defense, not a serve reception -- Dig
-            // formation/camera, not Receive. Confirmed live this was wrong: the whole
-            // team (Setter included) was easing into its Receive shape here, which
-            // reads completely differently from the mid-rally defensive recovery this
-            // actually is.
-            CutToPhaseCameraIfIdle("Dig");
-            string receivingTeam = m.Groups[1].Value;
-            if (Enum.TryParse(m.Groups[2].Value, ignoreCase: true, out PlayerRole receiverRole))
-            {
-                _lineHadRealWait = true;
-                // The crossing starts straight away -- the ball never waits on the
-                // chaser's side for the receiving team to settle; their Dig ease plays
-                // out alongside the flight instead.
-                ApplyTeamFormation(receivingTeam, "Dig", null, receiveFormationLeadDuration);
-                // The Setter doesn't linger in Dig shape -- it's not the one digging
-                // this free ball, so its actual job (setting it right back up) starts
-                // right away, same early-release pattern as the Serve->Receive and
-                // successful-Dig legs elsewhere in this file. freeBallTarget.Role can
-                // never BE the Setter (Team.EligibleReceivers excludes it), so there's
-                // no collision to guard against the way the Dig-catch leg needs to.
-                if (_teamPositions.TryGetValue(receivingTeam, out var freeBallPositions)
-                    && freeBallPositions.TryGetValue(PlayerRole.Setter, out Transform freeBallSetterT))
-                {
-                    MovePlayerTo(freeBallSetterT, GetFormationPosition(receivingTeam, PlayerRole.Setter, "Set"), receiveFormationLeadDuration);
-                }
-                yield return MoveBallToWhenReady(receivingTeam, receiverRole, allowBounce: false);
-            }
+            _attackPhaseCleared = true;
         }
-        else if ((m = DeflectRegex.Match(line)).Success)
+        // "X", not the value -- the attacker's strength is what Block is guessing at.
+        SetFloatingLabel(commit.Team, role, "X", Color.white);
+        // The AI's committed lanes -- exactly what the human needs to see to block.
+        // (The human's own open options get UpdateHitTrajectoryPreviews instead.)
+        if (commit.Team != _teamAName)
         {
-            string digTeam = m.Groups[1].Value;
-            bool deflectDug = !line.Contains("NOT DUG");
-            SetFloatingLabel(digTeam, DeflectDigRole, m.Groups[2].Value, deflectDug ? floatingSuccessColor : floatingFailureColor);
-            CutToPhaseCameraIfIdle("Dig");
-            _lineHadRealWait = true;
-            bool preLaunched = _digPreLaunched && digTeam == _teamAName;
-            if (preLaunched)
-            {
-                _digPreLaunched = false;
-            }
-            if (preLaunched)
-            {
-                // Already flying -- released into the catch, or (a miss) sent on
-                // through to the floor by ScanForStateUpdates.
-                yield return new WaitUntil(() => !_ballFlight.IsInFlight);
-            }
-            else
-            {
-                // A miss goes straight on through the Libero to the floor along the
-                // same arc (see BallFlight.RunThroughToFloor).
-                yield return MoveBallToWhenReady(digTeam, DeflectDigRole, contactHeight: digContactHeight, allowBounce: false,
-                    throughToFloor: !deflectDug);
-            }
+            string tempoLabel = GetTempoLabel(_lastSetCardValue);
+            ShowTrajectoryPreview(role,
+                GetSetContactPoint(commit.Team) + Vector3.up * setContactHeight,
+                GetAttackContactPoint(commit.Team, role, tempoLabel) + Vector3.up * attackContactHeight,
+                trajectorySelectedColor, GetFormationPeakHeight(commit.Team, role, "Attack", tempoLabel));
         }
-        else if ((m = ResolveRegex.Match(line)).Success)
-        {
-            // Ball movement to the hitter is now handled by Swing: above, which fires
-            // much earlier -- this just keeps the lane/attack-value bookkeeping
-            // GetCurrentDefenderRole() (dig/chase highlighting) still needs.
-            _lastLane = int.Parse(m.Groups[2].Value);
-            _lastAttackCardValue = int.Parse(m.Groups[4].Value);
+    }
 
-            // This is also the earliest point the defending role is knowable
-            // (GetDigDefenderRole needs the final attack card value, only narrated here)
-            // -- start the whole defending team moving into its Dig formation right
-            // away instead of leaving them standing still until the ball just arrives.
-            // The digger's own per-swing placement variance (_pendingAttackOffset)
-            // layers on top of their Dig-phase anchor via extraOffsets; every other
-            // defending role just gets its plain Dig anchor.
-            if (_lastAttackingTeam != null)
-            {
-                PlayerRole defenderRole = AttackResolution.GetDigDefenderRole(_lastLane, _lastAttackCardValue);
-                string defendingTeam = _lastAttackingTeam == _teamAName ? _teamBName : _teamAName;
-                // Estimate of how long until the ball is actually in the digger's
-                // hands: whatever's left of the current (Swing-to-hitter) flight,
-                // plus one narrative-only beat for the "Shot:" line that always
-                // narrates between here and Dig: -- close enough to tune live, same
-                // as every other timing constant introduced this session.
-                float remainingFlight = _ballFlight != null ? _ballFlight.RemainingFlightTime : 0f;
-                float estimatedDuration = (remainingFlight + narrativeBeatDelay) * digApproachLeadFraction;
-                ApplyTeamFormation(defendingTeam, "Dig", null, estimatedDuration,
-                    extraOffsets: new Dictionary<PlayerRole, Vector3> { [defenderRole] = _pendingAttackOffset });
-                // Not awaited: waiting here used to leave the ball sitting on the
-                // hitter's hand. The ease is sized off the swing's remaining flight,
-                // and the attack flight that follows (or the human's dig, which now
-                // launches at its own reveal and holds partway) gives the defense the
-                // rest of the time it needs.
-                _lineHadRealWait = true;
-            }
-        }
-        else if ((m = ShotRegex.Match(line)).Success)
+    private void PresentBlockCommit(BlockCommitEvent block)
+    {
+        // Only a quick set's forced blind single blocker shows an exact value -- a
+        // normal block only surfaces as a lane total at Resolve.
+        foreach (int lane in block.QuickLanes)
         {
-            _lastShotWasTip = m.Groups[1].Value.Equals("TIP", StringComparison.OrdinalIgnoreCase);
-        }
-        else if ((m = DigRegex.Match(line)).Success && _lastLane >= 0)
-        {
-            // The narrative's "Dig:" line doesn't name a role directly -- Core's
-            // GetDigDefenderRole is the same public lookup Rally itself uses, so
-            // we recompute it here from the last resolved lane/attack value
-            // rather than re-parsing something the engine never printed.
-            PlayerRole defenderRole = AttackResolution.GetDigDefenderRole(_lastLane, _lastAttackCardValue);
-            ClearFloatingNumbers(); // the ball crosses the net into this dig
-            // The successful attack's own value transfers onto the ball itself -- it's
-            // now what the defense has to beat, same number, new meaning.
-            SetFloatingLabelOnBall(_lastAttackCardValue.ToString(), Color.white);
-            // "DUG" vs "NOT DUG, no chase" is literal text, not a capture group --
-            // same convention as Receive's "clean pass"/"FAILED" a few lines up.
-            bool digSuccess = !line.Contains("NOT DUG");
-            SetFloatingLabel(m.Groups[1].Value, defenderRole, m.Groups[2].Value,
-                digSuccess ? floatingSuccessColor : floatingFailureColor);
-            CutToPhaseCameraIfIdle("Dig");
-            _lineHadRealWait = true;
-            bool preLaunched = _digPreLaunched && m.Groups[1].Value == _teamAName;
-            if (preLaunched)
+            if (block.CardsByLane.TryGetValue(lane, out var cards) && cards.Count > 0
+                && PlayerRoleExtensions.LaneToDefendingRole.TryGetValue(lane, out PlayerRole blocker))
             {
-                _digPreLaunched = false;
-            }
-            if (!digSuccess)
-            {
-                // The point is already decided -- the kill drives straight on through
-                // the digger and into the floor behind them, along the very same arc a
-                // successful dig would have taken (BallFlight.RunThroughToFloor), so it
-                // never changes direction. Previously this flew a separate flight to a
-                // spot beside the digger -- which, for a pre-launched human dig already
-                // held mid-air, read as the ball taking a weird turn.
-                if (preLaunched)
-                {
-                    yield return new WaitUntil(() => !_ballFlight.IsInFlight);
-                }
-                else if (_lastShotWasTip)
-                {
-                    yield return MoveBallToWhenReady(m.Groups[1].Value, defenderRole, targetOffset: _pendingAttackOffset,
-                        contactHeight: digContactHeight, allowBounce: false, throughToFloor: true);
-                }
-                else
-                {
-                    yield return MoveBallToWhenReady(m.Groups[1].Value, defenderRole, targetOffset: _pendingAttackOffset,
-                        peakHeight: attackPeakHeightByCardValue.Evaluate(_lastAttackCardValue), lateralSpeed: attackLateralSpeed,
-                        contactHeight: digContactHeight, allowBounce: false, throughToFloor: true);
-                }
-            }
-            else
-            {
-                // The digging team's own Setter starts toward its next job (setting
-                // this recovered ball) the instant the dig succeeds, without waiting
-                // for the later whole-team Set-formation batch move (SetRegex) --
-                // same early-release pattern as the Serve->Setter and Swing->Setter
-                // legs elsewhere in this file. Skipped when the Setter IS the digger
-                // (GetDigDefenderRole can return Setter for lane 1/2 on an odd attack
-                // value, confirmed in AttackResolution.cs) -- moving them before the
-                // ball's own flight below even starts would fly the ball at their
-                // new, already-vacated Set-phase spot instead of the real catch point,
-                // since MoveBallTo samples this role's LIVE transform at flight-start.
-                if (defenderRole != PlayerRole.Setter
-                    && _teamPositions.TryGetValue(m.Groups[1].Value, out var digTeamPositions)
-                    && digTeamPositions.TryGetValue(PlayerRole.Setter, out Transform diggingSetterT))
-                {
-                    MovePlayerTo(diggingSetterT, GetFormationPosition(m.Groups[1].Value, PlayerRole.Setter, "Set"), setterReturnDuration);
-                }
-
-                // Tips keep BallFlight's own generic default arc (a disguised soft
-                // shot should still loop in, not fly flat like a driven hit); every
-                // other shot type gets the card-value-driven flat, fast treatment --
-                // see attackPeakHeightByCardValue/attackLateralSpeed's own comments.
-                if (preLaunched)
-                {
-                    // Already on its way (PreLaunchHumanDig) and released by this very
-                    // line -- just let it arrive.
-                    yield return new WaitUntil(() => !_ballFlight.IsInFlight);
-                }
-                else if (_lastShotWasTip)
-                {
-                    yield return MoveBallToWhenReady(m.Groups[1].Value, defenderRole, targetOffset: _pendingAttackOffset,
-                        contactHeight: digContactHeight, allowBounce: false);
-                }
-                else
-                {
-                    yield return MoveBallToWhenReady(m.Groups[1].Value, defenderRole, targetOffset: _pendingAttackOffset,
-                        peakHeight: attackPeakHeightByCardValue.Evaluate(_lastAttackCardValue), lateralSpeed: attackLateralSpeed,
-                        contactHeight: digContactHeight, allowBounce: false);
-                }
-            }
-        }
-        else if (StuffedRegex.IsMatch(line) && _lastAttackingTeam != null && _lastLane >= 0)
-        {
-            // No further narrative line exists for a stuffed attack at all (Core ends
-            // the rally the instant the block wins) -- previously the ball just sat
-            // wherever the Swing: leg left it forever, which is exactly the "play
-            // doesn't reset, it just sort of stops" problem. Send it down onto the
-            // attacker's own side instead, near the lane it was hit from.
-            _lineHadRealWait = true;
-            if (PlayerRoleExtensions.LaneToRole.TryGetValue(_lastLane, out PlayerRole attackerRole)
-                && _teamPositions.TryGetValue(_lastAttackingTeam, out var attackerPositions)
-                && attackerPositions.TryGetValue(attackerRole, out Transform stuffTarget))
-            {
-                yield return MoveBallToFloorPosition(stuffTarget, stuffedLandingPeakHeight);
+                CutToPhaseCameraIfIdle("Block");
+                SetFloatingNumber(block.Team, blocker, cards[0].Value);
             }
         }
     }
 
-    private IEnumerator FlySwing(string team, PlayerRole role, Vector3 hitterDestination, float hitterPeakHeight)
+    private void PresentSwing(SwingEvent swing)
     {
-        Func<bool> holdWhile = team == _teamAName ? () => _holdForTip : null;
-        yield return MoveBallToWhenReady(team, role, destinationOverride: hitterDestination, peakHeight: hitterPeakHeight,
-            contactHeight: attackContactHeight, allowBounce: false, pauseAtFraction: swingPauseFraction, holdWhile: holdWhile);
+        string team = swing.Team;
+        PlayerRole role = swing.Hitter;
+        CutToPhaseCameraIfIdle("Attack");
+        // Fresh placement offset for this swing -- shared by the attack flight's
+        // target and the digger's own run, so both aim at the identical point.
+        float angle = UnityEngine.Random.value * Mathf.PI * 2f;
+        float radius = Mathf.Sqrt(UnityEngine.Random.value) * placementVarianceRadius; // sqrt for uniform area density
+        _pendingAttackOffset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+
+        string tempoLabel = GetTempoLabel(_lastSetCardValue);
+        Vector3 setterPos = GetSetContactPoint(team);
+        Vector3 hitterDestination = GetAttackContactPoint(team, role, tempoLabel);
+        float hitterPeakHeight = GetFormationPeakHeight(team, role, "Attack", tempoLabel);
+
+        // Whole team into its Attack formation for this tempo, timed off the set's own
+        // flight so the hitter lands on it; the Setter peels straight off to defense.
+        float hitterDuration = EstimateSetToHitterDuration(team, role, tempoLabel) * hitterMoveLeadFraction;
+        ApplyTeamFormation(team, "Attack", tempoLabel, hitterDuration);
+        if (_teamPositions.TryGetValue(team, out var positions) && positions.TryGetValue(PlayerRole.Setter, out Transform setterT))
+        {
+            MovePlayerTo(setterT, GetFormationPosition(team, PlayerRole.Setter, "Dig"), setterReturnDuration);
+        }
+
+        HideAllTrajectoryPreviewsExcept(role);
+        ShowTrajectoryPreview(role, setterPos + Vector3.up * setContactHeight, hitterDestination + Vector3.up * attackContactHeight,
+            trajectorySelectedColor, hitterPeakHeight);
+        // Holds short of the hitter while a human tip-or-hit is pending.
+        Func<bool> hold = HoldForDecisionsAfter(_presentIndex);
+        QueueFlight(() => FlySwing(team, role, hitterDestination, hitterPeakHeight, hold));
+    }
+
+    private IEnumerator FlySwing(string team, PlayerRole role, Vector3 hitterDestination, float hitterPeakHeight, Func<bool> hold)
+    {
+        yield return MoveBallTo(team, role, peakHeight: hitterPeakHeight, pauseAtFraction: swingPauseFraction, holdWhile: hold,
+            destinationOverride: hitterDestination, contactHeight: attackContactHeight, allowBounce: false);
         HideTrajectoryPreview(role);
     }
 
-    /// <summary>
-    /// Launches the opponent's attack toward the human's own digger the moment their
-    /// Dig (or the Cover attempt before it) goes live, holding partway across
-    /// (digPauseFraction) until the "Dig:" line proves the answer is in -- instead of
-    /// the attack sitting on the opposing hitter's hand for the whole decision. A hit
-    /// flies at the card-value-driven attack arc, a tip at BallFlight's softer default,
-    /// same as DigRegex's own flights. A miss is aborted mid-air by
-    /// ScanForStateUpdates and dropped to the floor by DigRegex's own handler.
-    /// </summary>
-    private IEnumerator PreLaunchHumanDig()
+    private void PresentResolve(ResolveEvent resolve)
     {
-        if (_scanAttackingTeam == _teamAName)
-        {
-            // The human's own attack deflecting back off the block onto their side --
-            // same soft, looping arc as a tip.
-            yield return MoveBallToWhenReady(_teamAName, DeflectDigRole, contactHeight: digContactHeight, allowBounce: false,
-                pauseAtFraction: digPauseFraction, holdWhile: () => _holdForDig);
-            yield break;
-        }
+        _lastLane = resolve.Lane;
+        _lastAttackCardValue = resolve.AttackCard.Value;
+        // The earliest point the digging role is knowable -- start the whole defending
+        // team into Dig shape now, the digger aiming at this swing's placement offset.
         PlayerRole defenderRole = AttackResolution.GetDigDefenderRole(_lastLane, _lastAttackCardValue);
-        ClearFloatingNumbers(); // the ball crosses the net into this dig
-        SetFloatingLabelOnBall(_lastAttackCardValue.ToString(), Color.white);
-        if (_lastShotWasTip)
+        float remainingFlight = _ballFlight != null ? _ballFlight.RemainingFlightTime : 0f;
+        float estimatedDuration = (remainingFlight + narrativeBeatDelay) * digApproachLeadFraction;
+        ApplyTeamFormation(Opponent(resolve.Team), "Dig", null, estimatedDuration,
+            extraOffsets: new Dictionary<PlayerRole, Vector3> { [defenderRole] = _pendingAttackOffset });
+    }
+
+    private IEnumerator PresentAttackOutcome(AttackOutcomeEvent outcome)
+    {
+        Func<bool> hold = HoldForDecisionsAfter(_presentIndex);
+        switch (outcome.Outcome)
         {
-            yield return MoveBallToWhenReady(_teamAName, defenderRole, targetOffset: _pendingAttackOffset,
-                contactHeight: digContactHeight, allowBounce: false,
-                pauseAtFraction: digPauseFraction, holdWhile: () => _holdForDig);
+            case AttackOutcomeType.Kill when outcome.Digger.HasValue:
+            {
+                // Through to the defense: the attack flies at the digger right away,
+                // holding partway across while a human cover/dig decision is pending.
+                string defendingTeam = Opponent(outcome.Team);
+                PlayerRole digger = outcome.Digger.Value;
+                bool soft = outcome.Shot == ShotKind.Tip;
+                int attackValue = _lastAttackCardValue;
+                Vector3 offset = _pendingAttackOffset;
+                _attackFlight = QueueFlight(() => FlyAttack(defendingTeam, digger, soft, attackValue, offset, hold));
+                break;
+            }
+            case AttackOutcomeType.Deflect:
+            {
+                // Off the block and back onto the attacker's own side, toward their
+                // Libero (Core names no digger for a deflection).
+                string team = outcome.Team;
+                _attackFlight = QueueFlight(() => MoveBallTo(team, DeflectDigRole, pauseAtFraction: digPauseFraction,
+                    holdWhile: hold, contactHeight: digContactHeight, allowBounce: false));
+                break;
+            }
+            case AttackOutcomeType.Stuffed:
+            {
+                // Blocked straight back down onto the attacker's side, near the lane.
+                if (PlayerRoleExtensions.LaneToRole.TryGetValue(outcome.Lane, out PlayerRole attackerRole)
+                    && _teamPositions.TryGetValue(outcome.Team, out var attackerPositions)
+                    && attackerPositions.TryGetValue(attackerRole, out Transform stuffTarget))
+                {
+                    yield return QueueFlightAndWait(() => MoveBallToFloorPosition(stuffTarget, stuffedLandingPeakHeight));
+                }
+                break;
+            }
+        }
+    }
+
+    private IEnumerator FlyAttack(string defendingTeam, PlayerRole digger, bool soft, int attackValue, Vector3 offset, Func<bool> hold)
+    {
+        ClearFloatingNumbers(); // the ball crosses the net into this dig
+        // The attack's own value transfers onto the ball -- it's what the dig has to beat.
+        SetFloatingLabelOnBall(attackValue.ToString(), Color.white);
+        // A tip loops in on BallFlight's softer default arc; everything else is the
+        // card-value-driven flat, fast hit.
+        if (soft)
+        {
+            yield return MoveBallTo(defendingTeam, digger, pauseAtFraction: digPauseFraction, holdWhile: hold,
+                targetOffset: offset, contactHeight: digContactHeight, allowBounce: false);
         }
         else
         {
-            yield return MoveBallToWhenReady(_teamAName, defenderRole, targetOffset: _pendingAttackOffset,
-                peakHeight: attackPeakHeightByCardValue.Evaluate(_lastAttackCardValue), lateralSpeed: attackLateralSpeed,
-                contactHeight: digContactHeight, allowBounce: false,
-                pauseAtFraction: digPauseFraction, holdWhile: () => _holdForDig);
+            yield return MoveBallTo(defendingTeam, digger, attackPeakHeightByCardValue.Evaluate(attackValue), attackLateralSpeed,
+                pauseAtFraction: digPauseFraction, holdWhile: hold,
+                targetOffset: offset, contactHeight: digContactHeight, allowBounce: false);
         }
     }
 
-    /// <summary>
-    /// Starts the receiver->setter flight for team A's SetCardRequest, but only once any
-    /// flight already in progress (the serve->receiver leg's resumed tail end, which may
-    /// still be physically finishing when this request goes live) has genuinely
-    /// completed -- FlyTo isn't reentrant-safe, since a second call while one is still
-    /// running would overwrite its in-progress state on the same Rigidbody.
-    /// </summary>
-    private IEnumerator MoveBallToSetterWhenReady(bool applyFormations = true)
+    private IEnumerator PresentDig(DigEvent dig)
     {
-        // Not before the ball has genuinely reached the passer -- neither the serve
-        // (toss included, see _serveInProgress) nor the incoming flight's own resumed
-        // tail end.
-        yield return new WaitUntil(() => !_serveInProgress && (_ballFlight == null || !_ballFlight.IsInFlight));
-        // SetRegex's own Set/Dig eases only run once "Set:" narrates, i.e. after this
-        // decision is already answered -- confirmed live that both teams sat in their
-        // previous (Receive/Dig) shapes for the whole "Choose a set card" decision.
-        // Start them here instead, the moment the pass leaves the passer's hands;
-        // SetRegex's later calls become no-op tweens, and only the tempo-dependent
-        // AttackPrep approach (which needs the chosen card) still waits for that line.
-        // (Skipped when the Set: line itself launches this leg -- it has already
-        // applied both formations plus the tempo-specific AttackPrep moves, which a
-        // second Set-formation pass here would undo.)
-        if (applyFormations)
+        SetFloatingLabel(dig.Team, dig.Digger, dig.Card.Value.ToString(), dig.Dug ? floatingSuccessColor : floatingFailureColor);
+        CutToPhaseCameraIfIdle("Dig");
+        if (!dig.Dug)
         {
-            ApplyTeamFormation(_teamAName, "Set", null, setterReturnDuration);
-            ApplyTeamFormation(_teamBName, "Dig", null, setterReturnDuration);
+            // The kill drives straight on through the digger into the floor.
+            yield return RunFlightThroughToFloor(_attackFlight, dig.Team, dig.Digger);
+            yield break;
         }
-        yield return MoveBallToWhenReady(_teamAName, PlayerRole.Setter,
-            peakHeight: receiveToSetPeakHeight, lateralSpeed: receiveToSetLateralSpeed,
-            pauseAtFraction: setPauseFraction, holdWhile: () => _holdForHumanAttack,
-            destinationOverride: GetSetContactPoint(_teamAName), allowBounce: false, contactHeight: setContactHeight);
+        // The digging team's Setter starts toward setting this ball right away --
+        // unless the Setter IS the digger, whose spot the ball is still flying to.
+        if (dig.Digger != PlayerRole.Setter
+            && _teamPositions.TryGetValue(dig.Team, out var positions)
+            && positions.TryGetValue(PlayerRole.Setter, out Transform setterT))
+        {
+            MovePlayerTo(setterT, GetFormationPosition(dig.Team, PlayerRole.Setter, "Set"), setterReturnDuration);
+        }
+        FlightHandle attack = _attackFlight;
+        if (attack != null)
+        {
+            yield return new WaitUntil(() => attack.Done);
+        }
+        LaunchPassToSetter(dig.Team, _presentIndex);
     }
 
-    /// <summary>
-    /// MoveBallTo, but waits for any flight already in progress to genuinely finish
-    /// first. Needed anywhere a flight can be triggered from outside the narrative's own
-    /// strictly-sequential PlayLines processing -- a new FlushNarrative/PlayLines batch
-    /// starts on every new active request, independent of whether an EARLIER batch's own
-    /// ball movement (or a directly-triggered one, like the Set leg's
-    /// MoveBallToSetterWhenReady) has actually finished yet. FlyTo isn't reentrant-safe:
-    /// confirmed live that the Swing: line's trigger (the attack-lane -> hitter leg) can
-    /// fire while the human's own Set leg is still resuming from its 50% hold, and
-    /// without this wait the two flights fight over the same Rigidbody state.
-    ///
-    /// holdWhile (with pauseAtFraction) holds the flight at that point for as long as it
-    /// returns true -- evaluated live at the pause point (see BallFlight._holdWhile), so
-    /// a decision answered before the flight even starts simply never holds, and one
-    /// that only goes live mid-flight still does.
-    /// </summary>
-    private IEnumerator MoveBallToWhenReady(string teamName, PlayerRole role, float peakHeight = -1f,
-        float lateralSpeed = -1f, float pauseAtFraction = -1f, Func<bool> holdWhile = null, Vector3? targetOffset = null,
-        Vector3? destinationOverride = null, bool allowBounce = true, float? contactHeight = null, bool throughToFloor = false)
+    private IEnumerator PresentDeflectDig(DeflectDigEvent deflect)
     {
-        if (_ballFlight != null)
+        SetFloatingLabel(deflect.Team, DeflectDigRole, deflect.Card.Value.ToString(),
+            deflect.Dug ? floatingSuccessColor : floatingFailureColor);
+        CutToPhaseCameraIfIdle("Dig");
+        if (!deflect.Dug)
         {
-            yield return new WaitUntil(() => !_ballFlight.IsInFlight);
+            yield return RunFlightThroughToFloor(_attackFlight, deflect.Team, DeflectDigRole);
+            yield break;
         }
-        yield return MoveBallTo(teamName, role, peakHeight, lateralSpeed, pauseAtFraction, targetOffset, destinationOverride,
-            allowBounce, contactHeight, holdWhile, throughToFloor);
+        FlightHandle attack = _attackFlight;
+        if (attack != null)
+        {
+            yield return new WaitUntil(() => attack.Done);
+        }
+        LaunchPassToSetter(deflect.Team, _presentIndex);
     }
 
     private IEnumerator MoveBallTo(string teamName, PlayerRole role, float peakHeight = -1f,
@@ -3104,7 +2696,7 @@ public class GameRunner : MonoBehaviour
         }
 
         // No camera switch here -- fixed cameras only now (no more Follow Camera, see
-        // PlayServeToss/HandleLine for the same decision). Whichever camera is already
+        // PlayServeToss/PresentServe for the same decision). Whichever camera is already
         // showing (set by ApplyPhaseCameraForRequest or CutToPhaseCameraIfIdle) is
         // expected to already frame wherever this flight travels; that's the whole
         // point of auditing each camera's coverage rather than chasing the ball.
@@ -3115,42 +2707,6 @@ public class GameRunner : MonoBehaviour
     }
 
     /// <summary>
-    /// Bounces the ball from the chaser to a random OTHER teammate the moment
-    /// FreeBallDiscardRequest goes live (see RevealActiveRequest's own case) -- Core
-    /// never actually tracks who on the recovering side redirects the ball before it
-    /// crosses the net (ChooseFreeBallDiscard is a pure cost, no role attached), so
-    /// this invents a target purely for presentation, so the ball visibly moves off
-    /// the chaser instead of sitting dead through the discard decision. Plays out at
-    /// full speed regardless of how long that decision takes -- confirmed live that
-    /// pausing this leg (an earlier version did) read as the free ball stalling right
-    /// when it should already be launching. The LATER "mandatory free ball to X"
-    /// crossing flight (FreeBallRegex) needs no changes to pick this up -- it always
-    /// starts from wherever the ball currently sits.
-    /// </summary>
-    private IEnumerator PlayFreeBallDiscardBounce()
-    {
-        // Same serve gate as PlayLines -- this reveal-triggered bounce otherwise could
-        // start out of a serve still in the air if the receive/chase were answered mid-toss.
-        yield return new WaitUntil(() => !_serveInProgress);
-        if (_pendingReceiveTeam == null || !_chaseRole.HasValue
-            || !_teamPositions.TryGetValue(_pendingReceiveTeam, out var positions))
-        {
-            yield break;
-        }
-        var candidates = positions.Keys.Where(role => role != _chaseRole.Value).ToList();
-        if (candidates.Count == 0)
-        {
-            yield break;
-        }
-        PlayerRole target = candidates[UnityEngine.Random.Range(0, candidates.Count)];
-        // Holds late in the bounce for the discard decision -- never landed on the
-        // teammate and left sitting there.
-        yield return MoveBallToWhenReady(_pendingReceiveTeam, target, peakHeight: freeBallBouncePeakHeight,
-            contactHeight: digContactHeight, allowBounce: false,
-            pauseAtFraction: freeBallDiscardPauseFraction, holdWhile: () => _activeRequest is FreeBallDiscardRequest);
-    }
-
-    /// <summary>
     /// Flies the ball to the floor near (not ON) nearTransform -- for a rally-ending
     /// outcome that lands on the court itself (a kill drilled past the dig, a stuffed
     /// attack falling back on the attacker's own side) rather than arriving at a player
@@ -3158,7 +2714,7 @@ public class GameRunner : MonoBehaviour
     /// clips straight into their capsule, which also reads as "in reach" rather than the
     /// dead, undiggable ball it's supposed to be -- offset laterally (randomized side,
     /// relative to the team's own facing) instead. Waits for any flight already in
-    /// progress first, same reentrancy reasoning as MoveBallToWhenReady.
+    /// progress first, same reentrancy reasoning as QueueFlight.
     /// </summary>
     private IEnumerator MoveBallToFloorPosition(Transform nearTransform, float peakHeight)
     {
@@ -3184,8 +2740,8 @@ public class GameRunner : MonoBehaviour
     /// the RECEIVING team (always _teamBName -- this only ever runs for team A's own
     /// serve) instantly into Receive shape right alongside it -- confirmed live this
     /// was missing: this method runs DURING the "choose a card to serve" decision,
-    /// well before HandleLine's ServeRegex branch (which only fires once that
-    /// decision is already answered and the "Serve:" line narrates) ever gets a
+    /// well before PresentServe (which only runs once that decision is already
+    /// answered and the ServeEvent exists) ever gets a
     /// chance to touch the receiver at all, so without this snap here specifically,
     /// the receiving team sat in whatever formation the PREVIOUS rally left them in
     /// for the entire serve-card decision. Instant, not eased, same "already
@@ -3238,7 +2794,7 @@ public class GameRunner : MonoBehaviour
     /// server accelerates along the ground to meet it -- the toss peaks, drops back
     /// down, and ends exactly at the contact point (serveContactHeight, ON the
     /// baseline) at the same moment the server arrives there. The ball is left at the
-    /// contact point so the serve arc that follows (HandleLine's Serve branch)
+    /// contact point so the serve arc that follows (PresentServe)
     /// launches from there immediately. The server stays at the baseline afterward --
     /// a real server finishes their approach at the line, not back where they started.
     /// For a human server, the toss holds at its own peak (see BallFlight.TossTo) until
@@ -3264,8 +2820,8 @@ public class GameRunner : MonoBehaviour
             yield break;
         }
         // The previous rally's tail-end flight (e.g. a kill/dig) may still be physically
-        // finishing when this rally's Serve line gets processed -- same reentrancy
-        // concern as MoveBallToWhenReady, since this repositions the ball directly
+        // finishing when this rally's serve gets presented -- same reentrancy
+        // concern as QueueFlight, since this repositions the ball directly
         // rather than going through FlyTo at all.
         yield return new WaitUntil(() => !_ballFlight.IsInFlight);
 
@@ -3364,8 +2920,8 @@ public class GameRunner : MonoBehaviour
 
     /// <summary>
     /// Physics-free estimate of how long the Set->Hitter flight about to start will
-    /// take, used to size the attacking team's Attack-phase move (see the SwingRegex
-    /// branch), computed from the Setter's Set-phase anchor to the hitter's Attack-phase
+    /// take, used to size the attacking team's Attack-phase move (see
+    /// PresentSwing), computed from the Setter's Set-phase anchor to the hitter's Attack-phase
     /// anchor rather than any live (possibly mid-ease) transform, and using BallFlight's
     /// own default lateral speed since the Swing flight doesn't override it.
     /// </summary>
@@ -3435,8 +2991,8 @@ public class GameRunner : MonoBehaviour
 
     /// <summary>
     /// Hides every pooled arc except (optionally) one -- pass null to clear everything
-    /// (a new rally starting; see the ServeRegex branch), or a role to narrow down to
-    /// just that one (the final swinging lane; see the SwingRegex branch).
+    /// (a new rally starting; see PresentServe), or a role to narrow down to just that
+    /// one (the final swinging lane; see PresentSwing).
     /// </summary>
     private void HideAllTrajectoryPreviewsExcept(PlayerRole? keep = null)
     {

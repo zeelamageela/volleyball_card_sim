@@ -51,6 +51,16 @@ namespace VolleyballCore
             }
         }
 
+        /// <summary>The event at <paramref name="index"/>, if it has been emitted yet.</summary>
+        public bool TryGet(int index, out RallyEvent rallyEvent)
+        {
+            lock (_events)
+            {
+                rallyEvent = index >= 0 && index < _events.Count ? _events[index] : null;
+                return rallyEvent != null;
+            }
+        }
+
         /// <summary>Copy of every event from <paramref name="startIndex"/> on.</summary>
         public List<RallyEvent> Since(int startIndex)
         {
@@ -365,9 +375,11 @@ namespace VolleyballCore
     }
 
     /// <summary>
-    /// A hit (or tip) against the block: Kill = through to the defense, Deflect =
-    /// exact tie back onto the attacker's side, Stuffed = blocked. Only emitted where
-    /// a block comparison actually happens (roll/heavy-spin shots bypass the block).
+    /// Where the attack goes: Kill = through (or, for roll/heavy spin, over) the block
+    /// to the defense, Deflect = exact tie back onto the attacker's side, Stuffed =
+    /// blocked. Emitted before the dig decision, so presentation can already fly the
+    /// ball toward Digger (set only for Kill -- the same role the later DigEvent
+    /// names). Roll/heavy spin never meet the block: Block is 0 for them.
     /// </summary>
     public sealed class AttackOutcomeEvent : RallyEvent
     {
@@ -377,8 +389,10 @@ namespace VolleyballCore
         public AttackOutcomeType Outcome { get; }
         public int Attack { get; }
         public int Block { get; }
+        public PlayerRole? Digger { get; }
 
-        public AttackOutcomeEvent(string team, int lane, ShotKind shot, AttackOutcomeType outcome, int attack, int block)
+        public AttackOutcomeEvent(string team, int lane, ShotKind shot, AttackOutcomeType outcome, int attack, int block,
+            PlayerRole? digger = null)
         {
             Team = team;
             Lane = lane;
@@ -386,6 +400,7 @@ namespace VolleyballCore
             Outcome = outcome;
             Attack = attack;
             Block = block;
+            Digger = digger;
         }
     }
 

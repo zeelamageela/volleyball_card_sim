@@ -603,10 +603,10 @@ namespace VolleyballCore
 
             // Tip beats the block (or the lane is empty): defender digs, same-or-lower,
             // no chase on failure.
-            Emit(new AttackOutcomeEvent(attacker.Name, attackLane, ShotKind.Tip, AttackOutcomeType.Kill,
-                effectiveTip, lowestBlocker ?? 0));
-            Card digCard = PhaseDig(defender, defStrat, effectiveTip, DigType.Tip);
             PlayerRole defenderRole = AttackResolution.GetDigDefenderRole(attackLane, attackCard.Value);
+            Emit(new AttackOutcomeEvent(attacker.Name, attackLane, ShotKind.Tip, AttackOutcomeType.Kill,
+                effectiveTip, lowestBlocker ?? 0, defenderRole));
+            Card digCard = PhaseDig(defender, defStrat, effectiveTip, DigType.Tip);
             int effectiveTipDig = digCard.Value;
             if (defender.AbilityEngine != null)
             {
@@ -673,7 +673,8 @@ namespace VolleyballCore
         {
             AttackOutcomeType outcome = AttackResolution.ResolveAttack(effectiveAttack, effectiveBlock);
             Narrate($"  Outcome: {outcome.ToString().ToUpperInvariant()}  (atk {effectiveAttack} vs blk {effectiveBlock})");
-            Emit(new AttackOutcomeEvent(attacker.Name, attackLane, ToShotKind(shot), outcome, effectiveAttack, effectiveBlock));
+            Emit(new AttackOutcomeEvent(attacker.Name, attackLane, ToShotKind(shot), outcome, effectiveAttack, effectiveBlock,
+                outcome == AttackOutcomeType.Kill ? AttackResolution.GetDigDefenderRole(attackLane, attackCard.Value) : null));
 
             if (outcome == AttackOutcomeType.Stuffed)
             {
@@ -827,8 +828,10 @@ namespace VolleyballCore
             Team attacker, Team defender, IStrategy atkStrat, IStrategy defStrat, int exchange,
             int attackLane, Card attackCard, int effectiveAttack)
         {
-            Card digCard = PhaseDig(defender, defStrat, effectiveAttack, DigType.Tip);
             PlayerRole defenderRole = AttackResolution.GetDigDefenderRole(attackLane, attackCard.Value);
+            Emit(new AttackOutcomeEvent(attacker.Name, attackLane, ShotKind.Roll, AttackOutcomeType.Kill,
+                effectiveAttack, 0, defenderRole));
+            Card digCard = PhaseDig(defender, defStrat, effectiveAttack, DigType.Tip);
             int effectiveDig = digCard.Value;
             if (defender.AbilityEngine != null)
             {
@@ -867,6 +870,8 @@ namespace VolleyballCore
                 digTarget += attacker.AbilityEngine.AttackDigThreshold(attackerRole.Value);
             }
             PlayerRole defenderRole = AttackResolution.GetDigDefenderRole(attackLane, attackCard.Value);
+            Emit(new AttackOutcomeEvent(attacker.Name, attackLane, ShotKind.HeavySpin, AttackOutcomeType.Kill,
+                effectiveAttack, 0, defenderRole));
             int coverThreshold = AttackResolution.CoverThreshold(defender);
             bool coverAttempted = false;
             Card digCard;

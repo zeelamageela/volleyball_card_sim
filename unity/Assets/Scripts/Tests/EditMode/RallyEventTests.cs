@@ -123,10 +123,10 @@ namespace VolleyballCore.Tests
                 Assert.AreEqual(Lines(l => l.StartsWith("Passive: Back Court")), Events<PassiveAbilityEvent>(), where);
                 // One block commit per exchange; the text only narrates quick-set blind blocks.
                 Assert.AreEqual(Events<SetEvent>(), Events<BlockCommitEvent>(), where);
-                // Outcome: and tip-STUFFED lines, plus one silent "tip got past the block"
-                // outcome for every tip that reached a dig.
-                int tipDigs = events.OfType<DigEvent>().Count(d => d.Shot == ShotKind.Tip);
-                Assert.AreEqual(Lines(l => l.StartsWith("Outcome:") || l.StartsWith("Tip:")) + tipDigs,
+                // Outcome: and tip-STUFFED lines, plus one silent "got past the block"
+                // outcome for every tip/roll/heavy-spin that reached a dig.
+                int silentKills = events.OfType<DigEvent>().Count(d => d.Shot is ShotKind.Tip or ShotKind.Roll or ShotKind.HeavySpin);
+                Assert.AreEqual(Lines(l => l.StartsWith("Outcome:") || l.StartsWith("Tip:")) + silentKills,
                     Events<AttackOutcomeEvent>(), where);
 
                 foreach (var e in events)
@@ -179,6 +179,7 @@ namespace VolleyballCore.Tests
                 SetEvent lastSet = null;
                 SwingEvent lastSwing = null;
                 ResolveEvent lastResolve = null;
+                AttackOutcomeEvent lastOutcome = null;
                 foreach (var e in events)
                 {
                     switch (e)
@@ -207,7 +208,14 @@ namespace VolleyballCore.Tests
                             Assert.AreEqual(lastSwing.Lane, resolve.Lane, where);
                             lastResolve = resolve;
                             break;
+                        case AttackOutcomeEvent outcome:
+                            Assert.AreEqual(outcome.Outcome == AttackOutcomeType.Kill, outcome.Digger.HasValue, where);
+                            lastOutcome = outcome;
+                            break;
                         case DigEvent dig:
+                            // The digger was already named when the attack got through.
+                            Assert.NotNull(lastOutcome, where);
+                            Assert.AreEqual(lastOutcome.Digger, dig.Digger, where);
                             Assert.NotNull(lastSwing, where);
                             Assert.AreNotEqual(lastSwing.Team, dig.Team, where);
                             Assert.AreEqual(
