@@ -777,9 +777,11 @@ public class GameRunner : MonoBehaviour
     /// raycast. Deliberately not hardcoded to defaultCamera/followCamera specifically --
     /// as more per-phase cameras get added, this keeps working as long as exactly one
     /// gameplay camera is enabled at a time (same convention SetActiveCamera already
-    /// relies on for main/follow).
+    /// relies on for main/follow). Internal, not private: PlayerSpriteAnimator also
+    /// needs "whichever camera the player is actually seeing this through" to bucket
+    /// a sprite's facing direction correctly.
     /// </summary>
-    private static Camera GetActiveGameplayCamera()
+    internal static Camera GetActiveGameplayCamera()
     {
         Camera[] cameras = Camera.allCameras;
         return cameras.Length > 0 ? cameras[0] : null;
