@@ -96,14 +96,17 @@ public class BallFlight : MonoBehaviour
         new Keyframe(0.08f, 0.01f, 0f, 0f),
         new Keyframe(1f, 0.001f, 0f, 0f));
 
-    // How much of the post-pause span (pause point -> destination) the slow-motion
-    // creep may cover before the ball stops outright. Confirmed live that without a
-    // cap a short, fast flight's creep (the receive->set leg holds for several chained
-    // decisions: Set, HitCards, AttackLane) carried the ball from its 90% hold point
-    // all the way into the setter's hands within a few seconds -- the curve's creep is
-    // a rate in flight-seconds, and that leg's last 10% is only ~0.025s of flight. At
-    // 0.25 a 90% hold never gets closer than 92.5%.
-    [SerializeField, Range(0f, 1f)] private float maxHoldCreepFraction = 0.25f;
+    // The furthest into a flight (as a fraction of its own total, NOT of the
+    // post-pause remainder) the slow-motion creep may carry the ball during a hold,
+    // whatever pauseAtFraction that flight was given -- a hard ceiling, independent of
+    // each leg's own default pause point (GameRunner's serveReceptionPauseFraction and
+    // friends), so a long-held decision can never creep the ball into someone's hands
+    // no matter how that default is tuned later. Confirmed live that without ANY cap, a
+    // short, fast flight's creep (the receive->set leg holds for several chained
+    // decisions: Set, HitCards, AttackLane) carried the ball from its hold point all
+    // the way into the setter's hands within a few seconds -- the curve's creep is a
+    // rate in flight-seconds, and that leg's last stretch is only ~0.025s of flight.
+    [SerializeField, Range(0f, 1f)] private float absoluteMaxHoldFraction = 0.9f;
 
     [Header("Serve toss (TossTo)")]
     [SerializeField] private float tossGravity = 20f; // independent of each lateral flight's own solved gravity -- this is a fixed, presentation-only constant for the toss's up/down motion
@@ -283,7 +286,7 @@ public class BallFlight : MonoBehaviour
                     scale = slowMotionByPostPauseProgress.Evaluate(postPauseProgress);
                     _elapsedFlightTime += subRealDt * scale;
                 }
-                _elapsedFlightTime = Mathf.Min(_elapsedFlightTime, _pauseAtFlightTime + postPauseSpan * maxHoldCreepFraction);
+                _elapsedFlightTime = Mathf.Min(_elapsedFlightTime, _totalFlightTime * absoluteMaxHoldFraction);
                 Time.timeScale = scale;
             }
             else

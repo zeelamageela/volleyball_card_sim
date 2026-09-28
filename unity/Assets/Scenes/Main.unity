@@ -2775,12 +2775,12 @@ MonoBehaviour:
   serveTossForwardDistance: 1
   serveContactBaselineOffset: 0
   serveReceptionPauseFraction: 0.55
-  setPauseFraction: 0.9
+  setPauseFraction: 0.55
   chaseRecoveryPauseFraction: 0.55
   freeBallBouncePeakHeight: 5
-  swingPauseFraction: 0.9
-  digPauseFraction: 0.5
-  freeBallDiscardPauseFraction: 0.9
+  swingPauseFraction: 0.55
+  digPauseFraction: 0.55
+  freeBallDiscardPauseFraction: 0.55
   decisionHoldRampDuration: 0.4
   decisionHoldTimeScale: 0.05
   floorLandingHeight: 0.15
@@ -2867,6 +2867,7 @@ MonoBehaviour:
   setterReturnDuration: 0.5
   receiveFormationLeadDuration: 0.5
   hitterMoveLeadFraction: 0.5
+  setToHitterLateralSpeed: 5
   trajectoryLineColor: {r: 1, g: 1, b: 1, a: 0.6}
   trajectorySelectedColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   trajectoryLineWidth: 0.05
@@ -6981,7 +6982,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  maxHoldCreepFraction: 0.25
+  absoluteMaxHoldFraction: 0.9
   tossGravity: 20
   bounceHeightPerSpeed: 0.03
   maxBounceHeight: 0.6

@@ -107,7 +107,7 @@ public class GameRunner : MonoBehaviour
     // through the human's block). Late in the arc on purpose -- the pass's rebound off the receiver always plays
     // out in full (it'll carry the reception animation), and the ball holds in flight
     // just short of the setter's hands, never on anyone's head.
-    [SerializeField] private float setPauseFraction = 0.9f;
+    [SerializeField] private float setPauseFraction = 0.55f;
     // failed reception -> chaser, through every chase attempt:
     [SerializeField] private float chaseRecoveryPauseFraction = 0.55f;
     [SerializeField] private float freeBallBouncePeakHeight = 0.5f;
@@ -117,9 +117,9 @@ public class GameRunner : MonoBehaviour
     // Dig (and any Cover attempt before it) is pending, chaser->teammate while the
     // free-ball discard is pending. The AI's own receive->setter leg reuses
     // setPauseFraction for the human's Block decision (same leg type, same hold).
-    [SerializeField] private float swingPauseFraction = 0.9f;
-    [SerializeField] private float digPauseFraction = 0.5f;
-    [SerializeField] private float freeBallDiscardPauseFraction = 0.9f;
+    [SerializeField] private float swingPauseFraction = 0.55f;
+    [SerializeField] private float digPauseFraction = 0.55f;
+    [SerializeField] private float freeBallDiscardPauseFraction = 0.55f;
 
     [Header("Decision hold with no ball flight to pause (currently: Block)")]
     // Block is committed BLIND, before the attacker's final lane is even chosen (Core's
@@ -241,6 +241,13 @@ public class GameRunner : MonoBehaviour
     // Attack anchor doubles as their old step-back position, timed to the ball instead
     // of a flat guess.
     [SerializeField] private float hitterMoveLeadFraction = 0.85f;
+    // The setter->hitter "set" flight's own speed -- previously had no dedicated field
+    // at all and fell through to BallFlight's generic defaultLateralSpeed (also shared
+    // by several unrelated flights: tip digs, deflections, chase recoveries, the free
+    // ball crossing, a stuffed landing), so there was no way to tune "the set" alone.
+    // Peak height is separately authored per role/tempo on each Attack anchor (see
+    // GetFormationPeakHeight/FormationAnchorHeight) -- this is only the speed knob.
+    [SerializeField] private float setToHitterLateralSpeed = 8f;
 
     [Header("Trajectory preview (Set -> every live hitting option)")]
     // Default color for a still-open, not-yet-committed option.
@@ -2541,7 +2548,8 @@ public class GameRunner : MonoBehaviour
 
     private IEnumerator FlySwing(string team, PlayerRole role, Vector3 hitterDestination, float hitterPeakHeight, Func<bool> hold)
     {
-        yield return MoveBallTo(team, role, peakHeight: hitterPeakHeight, pauseAtFraction: swingPauseFraction, holdWhile: hold,
+        yield return MoveBallTo(team, role, peakHeight: hitterPeakHeight, lateralSpeed: setToHitterLateralSpeed,
+            pauseAtFraction: swingPauseFraction, holdWhile: hold,
             destinationOverride: hitterDestination, contactHeight: attackContactHeight, allowBounce: false);
         HideTrajectoryPreview(role);
     }
@@ -2922,21 +2930,17 @@ public class GameRunner : MonoBehaviour
     /// Physics-free estimate of how long the Set->Hitter flight about to start will
     /// take, used to size the attacking team's Attack-phase move (see
     /// PresentSwing), computed from the Setter's Set-phase anchor to the hitter's Attack-phase
-    /// anchor rather than any live (possibly mid-ease) transform, and using BallFlight's
-    /// own default lateral speed since the Swing flight doesn't override it.
+    /// anchor rather than any live (possibly mid-ease) transform, using the same
+    /// setToHitterLateralSpeed the real flight (FlySwing) flies at.
     /// </summary>
     private float EstimateSetToHitterDuration(string team, PlayerRole role, string tempo)
     {
-        if (_ballFlight == null)
-        {
-            return 0f;
-        }
         Vector3 setterPos = GetSetContactPoint(team);
         Vector3 hitterPos = GetAttackContactPoint(team, role, tempo);
         float lateralDist = Vector3.Distance(
             new Vector3(setterPos.x, 0f, setterPos.z),
             new Vector3(hitterPos.x, 0f, hitterPos.z));
-        return lateralDist / _ballFlight.DefaultLateralSpeed;
+        return lateralDist / setToHitterLateralSpeed;
     }
 
     /// <summary>
