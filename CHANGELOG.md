@@ -1,5 +1,45 @@
 # Changelog
 
+## Unity Presentation Layer (September 2026)
+
+The Unity prototype (`unity/`, first added this month as a C# port of the locked
+ruleset above plus a 3D presentation layer) went through a full rework of how it
+drives that presentation. See `unity/README.md` for the lasting architecture writeup;
+this entry is the history of how it got there.
+
+### Changed
+- **Presentation is now driven by a typed event stream, not narrative text.** Rally
+  emits a structured event (`Core/RallyEvents.cs`) alongside every line it narrates —
+  serve, receive, chase, free ball, set, attack, block, swing, dig, deflect, and so on
+  — carrying facts presentation used to re-derive by regex or recompute independently
+  (the digging role, the free ball's receiver, whether a set was drawn blind).
+  `DecisionRecordingStrategy` puts the human's own decision prompts in that same
+  ordered stream. `GameRunner.RunPresentation` walks it strictly in order, replacing
+  ~20 regex patterns, reveal-after-flush gating, held-back trailing narrative lines,
+  and five separate per-decision hold flags with one loop and one hold rule
+  (`ShouldHoldFlight`).
+- **No decision ever leaves the ball sitting on a player.** Every human decision holds
+  the ball mid-flight (slow motion, not a stop) for as long as it's pending, released
+  the instant it's answered; AI-only touches never pause. A hard ceiling
+  (`BallFlight.absoluteMaxHoldFraction`) stops a long hold's own creep from ever
+  reaching a player's hands, independent of each leg's own default pause point.
+- **Serve toss/contact/launch reworked**: the toss rises past contact height and
+  launches the instant it falls back through it (no hang at the top), with contact and
+  the server's own approach landing exactly on the baseline.
+- A missed dig now runs on through the digger to the floor along the same arc it was
+  already flying, instead of stopping and launching a second flight in a new
+  direction (read as "the ball taking a weird turn").
+- A player doesn't move until they've genuinely touched the ball — e.g. the Setter's
+  peel-off to defense used to fire the instant the attack lane was narratively decided,
+  well before the ball had actually left their hands.
+
+### Added
+- **Touch cues for 2D sprite animation**: `PlayerTouchReceiver` (optional, no-op until
+  attached) fires the instant a player genuinely touches the ball — which touch, a
+  success flag, the shot kind, and a world-space point to face. `PlayerSpriteAnimator`
+  is a reference implementation translating that into Animator parameters
+  (front/back/left/right bucketed against whichever camera is live).
+
 ## Locked Ruleset Rewrite (September 2026)
 
 Rewrote the core resolution engine to match a newly locked, deliberately simplified ruleset — the previous system (below, Phase 5 and earlier) had gone deep enough on balance/complexity that it stopped being fun to play. This is a rules simplification, not a balance pass; PvD win rates are known to be off the old target bands and are being deliberately deprioritized for now.
