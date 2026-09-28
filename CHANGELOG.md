@@ -1,5 +1,67 @@
 # Changelog
 
+## Unity Presentation Layer (September 2026)
+
+The Unity prototype (`unity/`, first added this month as a C# port of the locked
+ruleset above plus a 3D presentation layer) went through a full rework of how it
+drives that presentation. See `unity/README.md` for the lasting architecture writeup;
+this entry is the history of how it got there.
+
+### Changed
+- **Presentation is now driven by a typed event stream, not narrative text.** Rally
+  emits a structured event (`Core/RallyEvents.cs`) alongside every line it narrates —
+  serve, receive, chase, free ball, set, attack, block, swing, dig, deflect, and so on
+  — carrying facts presentation used to re-derive by regex or recompute independently
+  (the digging role, the free ball's receiver, whether a set was drawn blind).
+  `DecisionRecordingStrategy` puts the human's own decision prompts in that same
+  ordered stream. `GameRunner.RunPresentation` walks it strictly in order, replacing
+  ~20 regex patterns, reveal-after-flush gating, held-back trailing narrative lines,
+  and five separate per-decision hold flags with one loop and one hold rule
+  (`ShouldHoldFlight`).
+- **No decision ever leaves the ball sitting on a player.** Every human decision holds
+  the ball mid-flight (slow motion, not a stop) for as long as it's pending, released
+  the instant it's answered; AI-only touches never pause. A hard ceiling
+  (`BallFlight.absoluteMaxHoldFraction`) stops a long hold's own creep from ever
+  reaching a player's hands, independent of each leg's own default pause point.
+- **Serve toss/contact/launch reworked**: the toss rises past contact height and
+  launches the instant it falls back through it (no hang at the top), with contact and
+  the server's own approach landing exactly on the baseline.
+- A missed dig now runs on through the digger to the floor along the same arc it was
+  already flying, instead of stopping and launching a second flight in a new
+  direction (read as "the ball taking a weird turn").
+- A player doesn't move until they've genuinely touched the ball — e.g. the Setter's
+  peel-off to defense used to fire the instant the attack lane was narratively decided,
+  well before the ball had actually left their hands.
+
+### Added
+- **Touch cues for 2D sprite animation**: `PlayerTouchReceiver` (optional, no-op until
+  attached) fires the instant a player genuinely touches the ball — which touch, a
+  success flag, the shot kind, and a world-space point to face. `PlayerSpriteAnimator`
+  is a reference implementation translating that into Animator parameters
+  (front/back/left/right bucketed against whichever camera is live).
+
+## Locked Ruleset Rewrite (September 2026)
+
+Rewrote the core resolution engine to match a newly locked, deliberately simplified ruleset — the previous system (below, Phase 5 and earlier) had gone deep enough on balance/complexity that it stopped being fun to play. This is a rules simplification, not a balance pass; PvD win rates are known to be off the old target bands and are being deliberately deprioritized for now.
+
+### Retired
+- **Card-matching cancellation system** (blocker-blocker, attacker-attacker, attacker-blocker lane elimination) — removed entirely, no replacement mechanic.
+- **Three-tier attack resolution** (kill / soft-deflect / hard-deflect / stuffed by margin) — replaced by a two-tier kill/stuffed split with deflection only on an exact numeric tie.
+- **Two-tier chase** (ARMED_ATTACK single-lane exposed attack, then FREE_BALL) — collapsed into one chase mechanic; success means different things depending on context (receive vs. dig failure).
+- **Per-team normal set-template CSV bundles** (`data/set_templates.csv`, `set_type=normal`) — replaced by one universal 3-tier template for every team. Broken-play templates are untouched (still per-team, still an open question).
+- **Quickset-specific no-chase rule** — replaced by a more general "unblocked hit can't be chased" rule.
+
+### Changed
+- Deck: flat 40 cards (4 copies each of Ace(1)-10), replacing the old skewed 28-card standard deck.
+- Tip threshold raised from <=3 to <=5; tip now checks against the lane's single lowest blocker card instead of the full block total.
+- Added the "combo" mechanic for two attackers sharing one lane: declared resolve order, stuffed-then-remove-highest-blocker-then-resolve-second-card.
+
+### Added
+- `src/mats.py` / `list_mats.py` — an explicit `Mat` object (6 fixed seats, each with a player + at most one ability) for the 4 pickable team identities (Blitz, Grind, Spread, Backline), built from the existing roster/ability CSVs.
+
+### Discovered (not fixed, worth knowing)
+- `data/player_cards.csv`'s `is_active: false` does not mean an ability is disabled — it means "passive, fires automatically." All 52 current ability rows are live in every game today, despite reading like a placeholder/inactive value.
+
 ## Phase 5 - Comprehensive Matching System (May 2026)
 
 ### Added

@@ -48,32 +48,26 @@ class SetTemplate:
 def _build_setter_templates() -> Dict[int, SetTemplate]:
     """
     Normal play: Setter sets the ball.
-    
-    Set Template (Phase 4 updated):
-    1-7:  Standard Sets - Various lane configurations (3 attackers max)
-    8-10: High Sets - More hang time, complex attacks (4 attackers max)
+
+    Universal set template (locked 2026-09-05), same for every team:
+      1-3:  Quickset - up to 2 lanes, front row only, single-blocker/no-stack block
+      4-7:  up to 2 lanes, any front/back mix, normal stacking
+      8-10: up to 3 lanes, any front/back mix, normal stacking
     """
     templates: Dict[int, SetTemplate] = {}
-    
-    # Quick sets (1-3): No back-row attacks (too fast)
+
+    # Quickset (1-3): front row only, up to 2 of the 3 lanes
     for v in (1, 2, 3):
-        templates[v] = SetTemplate(front_lanes=[1, 2, 3], back_lanes=[], max_attackers=3)
-    
-    # Strong side (4-5): OH + MB front, any back
-    for v in (4, 5):
-        templates[v] = SetTemplate(front_lanes=[1, 2], back_lanes=[1, 2, 3], max_attackers=3)
-    
-    # Weak side (6-7): MB + OPP front, any back
-    for v in (6, 7):
-        templates[v] = SetTemplate(front_lanes=[2, 3], back_lanes=[1, 2, 3], max_attackers=3)
-    
-    # High outside (8-9): OH + OPP front, any back (4 attackers!)
-    for v in (8, 9):
-        templates[v] = SetTemplate(front_lanes=[1, 3], back_lanes=[1, 2, 3], max_attackers=4)
-    
-    # Free choice (10): All lanes available (4 attackers!)
-    templates[10] = SetTemplate(front_lanes=[1, 2, 3], back_lanes=[1, 2, 3], max_attackers=4)
-    
+        templates[v] = SetTemplate(front_lanes=[1, 2, 3], back_lanes=[], max_attackers=2)
+
+    # 4-7: any front/back mix, up to 2 lanes
+    for v in (4, 5, 6, 7):
+        templates[v] = SetTemplate(front_lanes=[1, 2, 3], back_lanes=[1, 2, 3], max_attackers=2)
+
+    # 8-10: any front/back mix, up to 3 lanes
+    for v in (8, 9, 10):
+        templates[v] = SetTemplate(front_lanes=[1, 2, 3], back_lanes=[1, 2, 3], max_attackers=3)
+
     return templates
 
 
@@ -106,20 +100,6 @@ def _build_broken_play_templates() -> Dict[int, SetTemplate]:
 # Build both template sets
 SETTER_TEMPLATES: Dict[int, SetTemplate] = _build_setter_templates()
 BROKEN_PLAY_TEMPLATES: Dict[int, SetTemplate] = _build_broken_play_templates()
-
-# Legacy support: Keep old SET_ELIGIBLE_LANES for backward compatibility during transition
-def _build_set_lanes() -> Dict[int, List[int]]:
-    """DEPRECATED: Legacy function for backward compatibility."""
-    m: Dict[int, List[int]] = {}
-    for v in (1, 2, 3):   m[v] = [1, 2]
-    for v in (4, 5):      m[v] = [3, 2]
-    for v in (6, 7):      m[v] = [1, 2]
-    for v in (8, 9):      m[v] = [1, 3]
-    m[10] = [1, 2, 3]
-    return m
-
-
-SET_ELIGIBLE_LANES: Dict[int, List[int]] = _build_set_lanes()
 
 
 @dataclass

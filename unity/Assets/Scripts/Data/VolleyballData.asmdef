@@ -1,0 +1,16 @@
+{
+    "name": "VolleyballData",
+    "rootNamespace": "VolleyballData",
+    "references": [
+        "VolleyballCore"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

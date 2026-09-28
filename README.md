@@ -104,6 +104,14 @@ python test_balance_passives.py
 - Printable rules sheet: `PRINTABLE_REFERENCE_CARDS.md`
 - Historical handoff logs: `SESSION_NOTES.md`, `SESSION_NOTES_phase6.md`
 
+## Unity prototype
+
+`unity/` is where the game is actually played — a Unity presentation layer (3D court,
+ball flight, cameras, a 2D-sprite-animation hook) over a C# port of this same rules
+engine. `src/`/`main.py`/`play.py` remain the balance-testing/simulation side; the two
+rule implementations are kept in sync by hand, not by a shared source of truth. See
+`unity/README.md` for the project layout and presentation architecture.
+
 ## Historical context
 
 Older assumptions and phased writeups are preserved in session/changelog files for evolution tracking. Treat them as historical unless they match the current engine.

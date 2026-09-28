@@ -1,0 +1,34 @@
+COMMAND:
+/Applications/Xcode.app/Contents/Developer/usr/bin/python3 balance_matrix.py --mode all --games 300 --seed 42 --output results/post_ruleset_rewrite_all_300g_seed42_20260905_123853.csv
+
+STDOUT:
+   Blitz vs Grind    ->  54.00% /  46.00%
+   Blitz vs Easy     ->  37.33% /  62.67%
+   Blitz vs Medium   ->  48.00% /  52.00%
+   Blitz vs Hard     ->  49.33% /  50.67%
+   Blitz vs Spread   ->  61.67% /  38.33%
+   Blitz vs Backline ->  66.67% /  33.33%
+   Grind vs Blitz    ->  44.67% /  55.33%
+   Grind vs Easy     ->  18.00% /  82.00%
+   Grind vs Medium   ->  21.00% /  79.00%
+   Grind vs Hard     ->  31.33% /  68.67%
+   Grind vs Spread   ->  61.00% /  39.00%
+   Grind vs Backline ->  51.00% /  49.00%
+  Spread vs Blitz    ->  31.67% /  68.33%
+  Spread vs Grind    ->  38.67% /  61.33%
+  Spread vs Easy     ->  21.67% /  78.33%
+  Spread vs Medium   ->  25.67% /  74.33%
+  Spread vs Hard     ->  38.33% /  61.67%
+  Spread vs Backline ->  48.00% /  52.00%
+Backline vs Blitz    ->  33.00% /  67.00%
+Backline vs Grind    ->  39.33% /  60.67%
+Backline vs Easy     ->  20.67% /  79.33%
+Backline vs Medium   ->  16.67% /  83.33%
+Backline vs Hard     ->   0.33% /  99.67%
+Backline vs Spread   ->  58.33% /  41.67%
+
+Saved 24 matchup rows to results/post_ruleset_rewrite_all_300g_seed42_20260905_123853.csv
+
+STDERR:
+
+EXIT_CODE: 0

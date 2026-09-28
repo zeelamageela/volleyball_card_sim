@@ -4,44 +4,35 @@ Print this sheet as a quick tabletop rules aid. If this sheet and the engine eve
 
 ---
 
-## Card 1: Matching
+## Card 1: Combo (Two Hitters, One Lane)
 
-- Matching happens before final lane choice and before normal attack resolution.
-- Attacker card exactly equals blocker card in a lane: that lane is eliminated.
-- If all attack lanes are eliminated, the defender wins the rally.
-- Two blockers with the same value in one lane: both blockers cancel and the lane becomes unblocked.
-- Two attackers with the same value in one lane: that lane is eliminated and the defender wins that elimination.
-- In multi-attacker lanes, matched attacker/blocker values are removed and any unmatched cards remain in play.
+- When a front-row and a back-row attacker share one lane, declare your resolve order.
+- Resolve the first card: if it kills or deflects, the second card is discarded unused.
+- If the first card is genuinely stuffed, remove the single highest blocker card in that lane, then resolve the second card against what remains.
+- Either card may independently be declared a tip.
 
 ---
 
 ## Card 2: Block Touch Outcomes
 
-These outcomes apply only if the chosen lane survived matching.
+- Attack greater than block: KILL (then normal dig flow).
+- Attack exactly equals block: DEFLECT — ball falls to the attacker's own side; that team digs it.
+- Attack less than block (any amount, not tied): STUFFED — instant point, no dig.
 
-- Attack greater than block: no-touch attack (then normal dig flow).
-- Block 0-2 over attack: DEFLECT to defender side.
-- Block 3-4 over attack: DEFLECT to attacker side.
-- Block 5+ over attack: STUFF.
-
-Reminder:
-- Exact equality is a match, not a deflect.
+There is no matching/cancellation system — every lane resolves purely on attack value vs. block total.
 
 ---
 
 ## Card 3: Tip And Deflect Rules
 
 Tip:
-- Front-row normal attacks may tip at value 3 or less.
-- Back-row attacks cannot tip.
-- Some setter abilities can raise the tip threshold for one exchange.
-- No chase after a tip dig.
+- Any attack card value 5 or less may be declared a tip, front row only.
+- Compare against the lane's single lowest blocker card (not the block total): tip beats it (lower) → defender digs equal-or-higher against the tip's value; exact tie → deflect (below); tip loses (blocker higher) → instant stuffed, no dig.
+- No chase after a failed tip dig.
 
-Deflect:
-- Dig on the side determined by block margin.
-- Deflect dig target uses the highest single block card in the lane, not the full block total.
-- Back-row deflects are +2 harder to dig.
-- No chase after a deflect dig.
+Deflect (exact tie):
+- The attacker's own team digs, equal-or-higher, target = the tied value.
+- Chase IS allowed if this dig fails (unlike a tip). A successful direct dig keeps the same team attacking; a chase-recovered "broken dig" sends a free ball to the other side instead.
 
 ---
 

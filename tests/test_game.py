@@ -11,13 +11,13 @@ import random
 import unittest
 
 from src.cards import Card, Deck, HAND_SIZE
-from src.players import Team, SET_ELIGIBLE_LANES, PlayerRole
+from src.players import Team, SETTER_TEMPLATES, PlayerRole
 from src.game import resolve_attack, Rally, Game, POINTS_TO_WIN
 from src.game_state import AttackOutcomeType
 from src.strategies import RandomStrategy
 
 
-# ── resolve_attack ─────────────────────────────────────────────────────────────
+# ── resolve_attack (two-tier: KILL / DEFLECT on exact tie / STUFFED) ───────────
 
 class TestResolveAttack(unittest.TestCase):
 
@@ -31,11 +31,11 @@ class TestResolveAttack(unittest.TestCase):
     def test_kill_exact_greater(self):
         self.assertEqual(resolve_attack(10, 9), AttackOutcomeType.KILL)
 
-    def test_deflect_diff_1(self):
-        self.assertEqual(resolve_attack(6, 7), AttackOutcomeType.DEFLECT)
+    def test_deflect_on_exact_tie(self):
+        self.assertEqual(resolve_attack(5, 5), AttackOutcomeType.DEFLECT)
 
-    def test_deflect_diff_2(self):
-        self.assertEqual(resolve_attack(5, 7), AttackOutcomeType.DEFLECT)
+    def test_stuffed_when_block_higher_by_1(self):
+        self.assertEqual(resolve_attack(6, 7), AttackOutcomeType.STUFFED)
 
     def test_stuffed_diff_3(self):
         self.assertEqual(resolve_attack(4, 7), AttackOutcomeType.STUFFED)
@@ -44,50 +44,38 @@ class TestResolveAttack(unittest.TestCase):
         self.assertEqual(resolve_attack(1, 10), AttackOutcomeType.STUFFED)
 
     def test_boundary_attack_equals_block(self):
-        # attack == block: diff = 0, which is < 1 ... actually attack == block means
-        # attack is NOT > block, so diff = 0. diff <= 2 → DEFLECT
+        # attack == block is the only DEFLECT case in the two-tier rule
         self.assertEqual(resolve_attack(5, 5), AttackOutcomeType.DEFLECT)
 
 
-# ── SET_ELIGIBLE_LANES ────────────────────────────────────────────────────────
+# ── SETTER_TEMPLATES (universal set template, locked 2026-09-05) ───────────────
 
-class TestSetEligibleLanes(unittest.TestCase):
+class TestSetterTemplates(unittest.TestCase):
 
-    def test_quick_set_1(self):
-        self.assertEqual(SET_ELIGIBLE_LANES[1], [1, 2])
+    def test_quickset_tier_front_row_only_two_lanes(self):
+        for v in (1, 2, 3):
+            t = SETTER_TEMPLATES[v]
+            self.assertEqual(sorted(t.front_lanes), [1, 2, 3])
+            self.assertEqual(t.back_lanes, [])
+            self.assertEqual(t.max_attackers, 2)
 
-    def test_quick_set_2(self):
-        self.assertEqual(SET_ELIGIBLE_LANES[2], [1, 2])
+    def test_mid_tier_any_mix_two_lanes(self):
+        for v in (4, 5, 6, 7):
+            t = SETTER_TEMPLATES[v]
+            self.assertEqual(sorted(t.front_lanes), [1, 2, 3])
+            self.assertEqual(sorted(t.back_lanes), [1, 2, 3])
+            self.assertEqual(t.max_attackers, 2)
 
-    def test_quick_set_3(self):
-        self.assertEqual(SET_ELIGIBLE_LANES[3], [1, 2])
-
-    def test_weak_side_4(self):
-        self.assertEqual(SET_ELIGIBLE_LANES[4], [3, 2])
-
-    def test_weak_side_5(self):
-        self.assertEqual(SET_ELIGIBLE_LANES[5], [3, 2])
-
-    def test_strong_side_6(self):
-        self.assertEqual(SET_ELIGIBLE_LANES[6], [1, 2])
-
-    def test_strong_side_7(self):
-        self.assertEqual(SET_ELIGIBLE_LANES[7], [1, 2])
-
-    def test_high_outside_8(self):
-        self.assertEqual(SET_ELIGIBLE_LANES[8], [1, 3])
-
-    def test_high_outside_9(self):
-        self.assertEqual(SET_ELIGIBLE_LANES[9], [1, 3])
-
-    def test_free_choice_10(self):
-        # All three lanes eligible
-        self.assertEqual(sorted(SET_ELIGIBLE_LANES[10]), [1, 2, 3])
+    def test_high_tier_any_mix_three_lanes(self):
+        for v in (8, 9, 10):
+            t = SETTER_TEMPLATES[v]
+            self.assertEqual(sorted(t.front_lanes), [1, 2, 3])
+            self.assertEqual(sorted(t.back_lanes), [1, 2, 3])
+            self.assertEqual(t.max_attackers, 3)
 
     def test_all_values_covered(self):
         for v in range(1, 11):
-            self.assertIn(v, SET_ELIGIBLE_LANES)
-            self.assertTrue(len(SET_ELIGIBLE_LANES[v]) >= 2)
+            self.assertIn(v, SETTER_TEMPLATES)
 
 
 # ── Deck ──────────────────────────────────────────────────────────────────────
@@ -97,14 +85,15 @@ class TestDeck(unittest.TestCase):
     def _make_deck(self, seed: int = 0) -> Deck:
         return Deck(random.Random(seed))
 
-    def test_deck_has_20_cards(self):
+    def test_deck_has_40_cards(self):
+        # Locked ruleset: flat 40-card deck, 4 copies each of Ace(1)-10.
         deck = self._make_deck()
-        self.assertEqual(deck.draw_pile_size, 20)
+        self.assertEqual(deck.draw_pile_size, 40)
 
     def test_draw_reduces_pile(self):
         deck = self._make_deck()
         deck.draw()
-        self.assertEqual(deck.draw_pile_size, 19)
+        self.assertEqual(deck.draw_pile_size, 39)
 
     def test_discard_increases_discard_pile(self):
         deck = self._make_deck()
@@ -114,34 +103,32 @@ class TestDeck(unittest.TestCase):
 
     def test_reshuffle_when_draw_empty(self):
         deck = self._make_deck()
-        # Draw all 20 cards, discard them
-        cards = [deck.draw() for _ in range(20)]
+        # Draw all 40 cards, discard them
+        cards = [deck.draw() for _ in range(40)]
         for c in cards:
             deck.discard(c)
         self.assertEqual(deck.draw_pile_size, 0)
-        self.assertEqual(deck.discard_pile_size, 20)
+        self.assertEqual(deck.discard_pile_size, 40)
         # Drawing again should trigger a reshuffle
         drawn = deck.draw()
         self.assertIsInstance(drawn, Card)
-        # After reshuffle, discard is empty and draw pile had 20 cards, drew 1
-        self.assertEqual(deck.draw_pile_size, 19)
+        # After reshuffle, discard is empty and draw pile had 40 cards, drew 1
+        self.assertEqual(deck.draw_pile_size, 39)
         self.assertEqual(deck.discard_pile_size, 0)
 
     def test_error_both_empty(self):
         deck = self._make_deck()
         # Drain draw pile without discarding
-        for _ in range(20):
+        for _ in range(40):
             deck.draw()
         with self.assertRaises(RuntimeError):
             deck.draw()
 
-    def test_deck_values_are_1_to_10_each_color(self):
+    def test_deck_has_4_copies_of_each_value(self):
         deck = self._make_deck()
-        cards = [deck.draw() for _ in range(20)]
-        red_vals   = sorted(c.value for c in cards if c.color == "red")
-        black_vals = sorted(c.value for c in cards if c.color == "black")
-        self.assertEqual(red_vals,   list(range(1, 11)))
-        self.assertEqual(black_vals, list(range(1, 11)))
+        cards = [deck.draw() for _ in range(40)]
+        counts = {v: sum(1 for c in cards if c.value == v) for v in range(1, 11)}
+        self.assertEqual(counts, {v: 4 for v in range(1, 11)})
 
 
 # ── Team hand mechanics ────────────────────────────────────────────────────────

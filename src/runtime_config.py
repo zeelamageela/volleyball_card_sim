@@ -193,11 +193,13 @@ def resolve_team_runtime_config(
     if resolved_roster is None and selected.roster_file:
         resolved_roster = data_dir / selected.roster_file
 
+    # Normal-play set templates are universal for every team (locked 2026-09-05);
+    # per-team CSV "normal" bundles are no longer applied. Broken-play templates
+    # remain per-team/CSV-driven (open question, not yet revisited).
     chosen_bundle = bundles.get(selected.set_template.lower(), None)
     normal = _clone_templates(SETTER_TEMPLATES)
     broken = _clone_templates(BROKEN_PLAY_TEMPLATES)
     if chosen_bundle:
-        normal.update(chosen_bundle.get("normal", {}))
         broken.update(chosen_bundle.get("broken", {}))
 
     return TeamRuntimeConfig(
