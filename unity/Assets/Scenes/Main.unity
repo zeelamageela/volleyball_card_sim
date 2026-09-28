@@ -1069,13 +1069,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 177896933}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0.9702957, z: -0.24192187, w: 0}
-  m_LocalPosition: {x: 0, y: 13.3, z: 21.6}
+  m_LocalRotation: {x: 0.073912784, y: 0.7032332, z: -0.073912784, w: 0.7032332}
+  m_LocalPosition: {x: -50.5, y: 10.95, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 525001630}
-  m_LocalEulerAnglesHint: {x: 28, y: 180, z: 0}
+  m_LocalEulerAnglesHint: {x: 12, y: 90, z: 0}
 --- !u!20 &177896935
 Camera:
   m_ObjectHideFlags: 0
@@ -1109,7 +1109,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 21
+  field of view: 11
   orthographic: 0
   orthographic size: 5
   m_Depth: 0
@@ -2867,7 +2867,7 @@ MonoBehaviour:
   setterReturnDuration: 0.5
   receiveFormationLeadDuration: 0.5
   hitterMoveLeadFraction: 0.5
-  setToHitterLateralSpeed: 5
+  setToHitterLateralSpeed: 3.5
   trajectoryLineColor: {r: 1, g: 1, b: 1, a: 0.6}
   trajectorySelectedColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   trajectoryLineWidth: 0.05
@@ -6467,7 +6467,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d35212aa2b4744370b08b3e03c96a2fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FormationAnchorHeight
-  peakHeight: 1.4
+  peakHeight: 1.1
 --- !u!1 &1366825536
 GameObject:
   m_ObjectHideFlags: 0
@@ -7654,7 +7654,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d35212aa2b4744370b08b3e03c96a2fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FormationAnchorHeight
-  peakHeight: 3.4
+  peakHeight: 1.5
 --- !u!224 &1650882469 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5970172091031400423, guid: 190ac632826204332a30fef1ac988266, type: 3}

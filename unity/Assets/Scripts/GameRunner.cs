@@ -2529,14 +2529,16 @@ public class GameRunner : MonoBehaviour
         Vector3 hitterDestination = GetAttackContactPoint(team, role, tempoLabel);
         float hitterPeakHeight = GetFormationPeakHeight(team, role, "Attack", tempoLabel);
 
-        // Whole team into its Attack formation for this tempo, timed off the set's own
-        // flight so the hitter lands on it; the Setter peels straight off to defense.
+        // Whole team but the Setter into its Attack formation for this tempo, timed off
+        // the set's own flight so the hitter lands on it. The Setter stays exactly where
+        // it is for now -- confirmed live that moving it here (as this used to) started
+        // the Setter walking away from its Set-phase spot before the ball had actually
+        // left its hands, since Swing narrates the instant the lane is finalized, well
+        // before the FlySwing flight queued below actually gets its turn to start. The
+        // Setter's own peel-off to defense is the first thing FlySwing itself does, so
+        // it happens exactly when the ball genuinely departs, never before.
         float hitterDuration = EstimateSetToHitterDuration(team, role, tempoLabel) * hitterMoveLeadFraction;
-        ApplyTeamFormation(team, "Attack", tempoLabel, hitterDuration);
-        if (_teamPositions.TryGetValue(team, out var positions) && positions.TryGetValue(PlayerRole.Setter, out Transform setterT))
-        {
-            MovePlayerTo(setterT, GetFormationPosition(team, PlayerRole.Setter, "Dig"), setterReturnDuration);
-        }
+        ApplyTeamFormation(team, "Attack", tempoLabel, hitterDuration, excludeRoles: new[] { PlayerRole.Setter });
 
         HideAllTrajectoryPreviewsExcept(role);
         ShowTrajectoryPreview(role, setterPos + Vector3.up * setContactHeight, hitterDestination + Vector3.up * attackContactHeight,
@@ -2548,6 +2550,14 @@ public class GameRunner : MonoBehaviour
 
     private IEnumerator FlySwing(string team, PlayerRole role, Vector3 hitterDestination, float hitterPeakHeight, Func<bool> hold)
     {
+        // QueueFlight only starts this coroutine once the earlier pass into the Setter's
+        // hands has genuinely finished -- so right here, before anything else, IS the
+        // moment the ball actually leaves the Setter. Its own peel-off to defense
+        // belongs exactly here, not any earlier (see PresentSwing's own comment).
+        if (_teamPositions.TryGetValue(team, out var positions) && positions.TryGetValue(PlayerRole.Setter, out Transform setterT))
+        {
+            MovePlayerTo(setterT, GetFormationPosition(team, PlayerRole.Setter, "Dig"), setterReturnDuration);
+        }
         yield return MoveBallTo(team, role, peakHeight: hitterPeakHeight, lateralSpeed: setToHitterLateralSpeed,
             pauseAtFraction: swingPauseFraction, holdWhile: hold,
             destinationOverride: hitterDestination, contactHeight: attackContactHeight, allowBounce: false);
@@ -3170,7 +3180,8 @@ public class GameRunner : MonoBehaviour
     /// formation position -- used for the digger's own per-swing placement variance
     /// (_pendingAttackOffset) on top of its Dig-phase anchor.
     /// </summary>
-    private void ApplyTeamFormation(string team, string phase, string tempo, float duration, Dictionary<PlayerRole, Vector3> extraOffsets = null)
+    private void ApplyTeamFormation(string team, string phase, string tempo, float duration,
+        Dictionary<PlayerRole, Vector3> extraOffsets = null, IReadOnlyCollection<PlayerRole> excludeRoles = null)
     {
         if (!_teamPositions.TryGetValue(team, out var positions))
         {
@@ -3179,6 +3190,10 @@ public class GameRunner : MonoBehaviour
         foreach (var kv in positions)
         {
             PlayerRole role = kv.Key;
+            if (excludeRoles != null && excludeRoles.Contains(role))
+            {
+                continue;
+            }
             Transform roleT = kv.Value;
             Vector3 dest = GetFormationPosition(team, role, phase, tempo);
             if (extraOffsets != null && extraOffsets.TryGetValue(role, out Vector3 offset))
