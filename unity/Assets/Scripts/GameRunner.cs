@@ -2091,13 +2091,17 @@ public class GameRunner : MonoBehaviour
     /// heading for, into the floor (BallFlight.RunThroughToFloor) -- or, if it already
     /// landed on them, drops to the floor beside them.
     /// </summary>
-    private IEnumerator RunFlightThroughToFloor(FlightHandle flight, string team, PlayerRole role)
+    private IEnumerator RunFlightThroughToFloor(FlightHandle flight, string team, PlayerRole role, TouchKind kind, ShotKind? shot = null)
     {
         if (flight == null)
         {
             yield break;
         }
         yield return new WaitUntil(() => flight.Started);
+        // A miss is still a real touch -- a shanked pass, a whiffed dig -- worth its
+        // own reaction, not silence. Faces wherever the ball actually is (about to run
+        // on past this player) rather than guessing a formation spot.
+        FireTouchCue(team, role, kind, _ball != null ? _ball.position : PlayerPosition(team, role), success: false, shot: shot);
         if (!flight.Done)
         {
             _ballFlight?.RunThroughToFloor(floorLandingHeight);
@@ -2116,6 +2120,31 @@ public class GameRunner : MonoBehaviour
     }
 
     private string Opponent(string team) => team == _teamAName ? _teamBName : _teamAName;
+
+    private Vector3 PlayerPosition(string team, PlayerRole role) =>
+        _teamPositions.TryGetValue(team, out var positions) && positions.TryGetValue(role, out Transform t) ? t.position : Vector3.zero;
+
+    /// <summary>
+    /// Fires a touch cue (see PlayerTouchReceiver) on whichever player just genuinely
+    /// touched the ball -- a no-op if that player's Transform has no
+    /// PlayerTouchReceiver attached, so every call site below is safe before any
+    /// sprite work exists. Each call site fires this as close to the real physical
+    /// touch as this file's timing gets: either directly where contact is already
+    /// confirmed (the serve, whose toss has just landed), or as the very first line of
+    /// a coroutine that QueueFlight only starts once the flight actually carrying the
+    /// ball there has genuinely finished -- never at the moment the narrative/decision
+    /// for a touch exists, which can be well before the ball has physically arrived
+    /// (confirmed live: this exact gap was the bug behind "the Setter moves before
+    /// they set the ball").
+    /// </summary>
+    private void FireTouchCue(string team, PlayerRole role, TouchKind kind, Vector3 facingTarget, bool success = true, ShotKind? shot = null)
+    {
+        if (_teamPositions.TryGetValue(team, out var positions) && positions.TryGetValue(role, out Transform t)
+            && t.TryGetComponent(out PlayerTouchReceiver receiver))
+        {
+            receiver.OnTouch(kind, success, shot, facingTarget);
+        }
+    }
 
     private void LogNewNarrative()
     {
@@ -2299,6 +2328,11 @@ public class GameRunner : MonoBehaviour
         }
         yield return AwaitServeToss(serverTeam);
 
+        // Contact is confirmed the instant AwaitServeToss returns -- nothing upstream
+        // of this touch to chain a coroutine's start behind, unlike every other cue
+        // below, so this one just fires directly, right here.
+        FireTouchCue(serverTeam, PlayerRole.Setter, TouchKind.Serve, GetReceiveContactPoint(receiverTeam, serve.Target));
+
         // The serve launches the instant the toss reaches contact. The receivers were
         // snapped into Receive shape before the toss, so only the Setter's peel-off
         // toward its Set spot is a real move here -- it isn't receiving, so its actual
@@ -2327,7 +2361,7 @@ public class GameRunner : MonoBehaviour
         {
             // The pass rebounds straight off the passer toward the setter -- it never
             // sits on the passer's head. A failed pass waits for ChaseStarted instead.
-            LaunchPassToSetter(receive.Team, _presentIndex);
+            LaunchPassToSetter(receive.Team, _presentIndex, receive.Passer, TouchKind.Receive);
         }
     }
 
@@ -2336,17 +2370,20 @@ public class GameRunner : MonoBehaviour
     /// to the setter, holding just short of the setter's hands for as long as the
     /// human's set/hit/lane (or, for the AI's pass, block) decisions are pending.
     /// Moves both teams into shape the moment the pass leaves: the setting team to Set,
-    /// the other to Dig.
+    /// the other to Dig. Every "someone caught it and is passing to the setter" touch
+    /// funnels through here (Receive/Dig/Deflect/FreeBallCatch) -- passer/kind/shot say
+    /// who just touched it and how, for the touch cue PassToSetter fires at its start.
     /// </summary>
-    private void LaunchPassToSetter(string team, int launchIndex)
+    private void LaunchPassToSetter(string team, int launchIndex, PlayerRole passer, TouchKind kind, ShotKind? shot = null)
     {
         string other = Opponent(team);
         Func<bool> hold = HoldForDecisionsAfter(launchIndex);
-        _setterPass = QueueFlight(() => PassToSetter(team, other, hold));
+        _setterPass = QueueFlight(() => PassToSetter(team, other, passer, kind, shot, hold));
     }
 
-    private IEnumerator PassToSetter(string team, string other, Func<bool> hold)
+    private IEnumerator PassToSetter(string team, string other, PlayerRole passer, TouchKind kind, ShotKind? shot, Func<bool> hold)
     {
+        FireTouchCue(team, passer, kind, GetSetContactPoint(team), shot: shot);
         ApplyTeamFormation(team, "Set", null, setterReturnDuration);
         ApplyTeamFormation(other, "Dig", null, setterReturnDuration);
         yield return MoveBallTo(team, PlayerRole.Setter, receiveToSetPeakHeight, receiveToSetLateralSpeed,
@@ -2363,12 +2400,23 @@ public class GameRunner : MonoBehaviour
         }
         _chaseRole = GetAdjacentChaseRole(_pendingReceiveRole.Value);
         PlayerRole chaser = _chaseRole.Value;
+        PlayerRole originalReceiver = _pendingReceiveRole.Value;
         string team = chase.Team;
         Func<bool> hold = HoldForDecisionsAfter(_presentIndex);
         // Holds through every chase attempt (the next ball event is ChaseEnded).
-        _chaseFlight = QueueFlight(() => MoveBallTo(team, chaser, chaseLandingPeakHeight,
+        _chaseFlight = QueueFlight(() => FlyToChaser(team, chaser, originalReceiver, hold));
+    }
+
+    private IEnumerator FlyToChaser(string team, PlayerRole chaser, PlayerRole originalReceiver, Func<bool> hold)
+    {
+        // The original receiver's own touch -- a failed pass, still a real one, worth
+        // its own reaction -- fires here: this coroutine only starts once whatever sent
+        // the serve their way (the crossing flight from PresentServe) has genuinely
+        // arrived.
+        FireTouchCue(team, originalReceiver, TouchKind.Receive, PlayerPosition(team, chaser), success: false);
+        yield return MoveBallTo(team, chaser, chaseLandingPeakHeight,
             pauseAtFraction: chaseRecoveryPauseFraction, holdWhile: hold,
-            contactHeight: digContactHeight, allowBounce: false));
+            contactHeight: digContactHeight, allowBounce: false);
     }
 
     private IEnumerator PresentChaseEnded(ChaseEndedEvent chase)
@@ -2379,7 +2427,7 @@ public class GameRunner : MonoBehaviour
             // the chaser into the floor.
             if (_chaseRole.HasValue)
             {
-                yield return RunFlightThroughToFloor(_chaseFlight, chase.Team, _chaseRole.Value);
+                yield return RunFlightThroughToFloor(_chaseFlight, chase.Team, _chaseRole.Value, TouchKind.Chase);
             }
             yield break;
         }
@@ -2399,9 +2447,17 @@ public class GameRunner : MonoBehaviour
         PlayerRole target = candidates[UnityEngine.Random.Range(0, candidates.Count)];
         string team = chase.Team;
         Func<bool> hold = HoldForDecisionsAfter(_presentIndex);
-        QueueFlight(() => MoveBallTo(team, target, freeBallBouncePeakHeight,
+        QueueFlight(() => FlyChaseBounce(team, chaser, target, hold));
+    }
+
+    private IEnumerator FlyChaseBounce(string team, PlayerRole chaser, PlayerRole target, Func<bool> hold)
+    {
+        // The chaser's own recovery -- fires here, once the scramble flight above has
+        // genuinely finished reaching them.
+        FireTouchCue(team, chaser, TouchKind.Chase, PlayerPosition(team, target));
+        yield return MoveBallTo(team, target, freeBallBouncePeakHeight,
             pauseAtFraction: freeBallDiscardPauseFraction, holdWhile: hold,
-            contactHeight: digContactHeight, allowBounce: false));
+            contactHeight: digContactHeight, allowBounce: false);
     }
 
     private IEnumerator PresentFreeBall(FreeBallEvent freeBall)
@@ -2420,7 +2476,7 @@ public class GameRunner : MonoBehaviour
             MovePlayerTo(setterT, GetFormationPosition(team, PlayerRole.Setter, "Set"), receiveFormationLeadDuration);
         }
         yield return QueueFlightAndWait(() => MoveBallTo(team, receiver, allowBounce: false));
-        LaunchPassToSetter(team, _presentIndex);
+        LaunchPassToSetter(team, _presentIndex, receiver, TouchKind.FreeBallCatch);
     }
 
     private IEnumerator PresentSet(SetEvent set)
@@ -2556,6 +2612,7 @@ public class GameRunner : MonoBehaviour
         // belongs exactly here, not any earlier (see PresentSwing's own comment).
         if (_teamPositions.TryGetValue(team, out var positions) && positions.TryGetValue(PlayerRole.Setter, out Transform setterT))
         {
+            FireTouchCue(team, PlayerRole.Setter, TouchKind.Set, hitterDestination);
             MovePlayerTo(setterT, GetFormationPosition(team, PlayerRole.Setter, "Dig"), setterReturnDuration);
         }
         yield return MoveBallTo(team, role, peakHeight: hitterPeakHeight, lateralSpeed: setToHitterLateralSpeed,
@@ -2580,6 +2637,13 @@ public class GameRunner : MonoBehaviour
     private IEnumerator PresentAttackOutcome(AttackOutcomeEvent outcome)
     {
         Func<bool> hold = HoldForDecisionsAfter(_presentIndex);
+        // The hitter whose swing this is -- known from the lane, same lookup Swing/
+        // AttackCommit already use. Missing only if a fully forced-blind exchange
+        // somehow reached here with an unmapped lane, which shouldn't happen; the
+        // touch cue is simply skipped in that case (attackerRole stays null).
+        PlayerRoleExtensions.LaneToRole.TryGetValue(outcome.Lane, out PlayerRole attackerRole);
+        string attackTeam = outcome.Team;
+        ShotKind shot = outcome.Shot;
         switch (outcome.Outcome)
         {
             case AttackOutcomeType.Kill when outcome.Digger.HasValue:
@@ -2591,34 +2655,36 @@ public class GameRunner : MonoBehaviour
                 bool soft = outcome.Shot == ShotKind.Tip;
                 int attackValue = _lastAttackCardValue;
                 Vector3 offset = _pendingAttackOffset;
-                _attackFlight = QueueFlight(() => FlyAttack(defendingTeam, digger, soft, attackValue, offset, hold));
+                _attackFlight = QueueFlight(() => FlyAttack(attackTeam, attackerRole, shot, defendingTeam, digger, soft, attackValue, offset, hold));
                 break;
             }
             case AttackOutcomeType.Deflect:
             {
                 // Off the block and back onto the attacker's own side, toward their
                 // Libero (Core names no digger for a deflection).
-                string team = outcome.Team;
-                _attackFlight = QueueFlight(() => MoveBallTo(team, DeflectDigRole, pauseAtFraction: digPauseFraction,
-                    holdWhile: hold, contactHeight: digContactHeight, allowBounce: false));
+                _attackFlight = QueueFlight(() => FlyDeflect(attackTeam, attackerRole, shot, hold));
                 break;
             }
             case AttackOutcomeType.Stuffed:
             {
                 // Blocked straight back down onto the attacker's side, near the lane.
-                if (PlayerRoleExtensions.LaneToRole.TryGetValue(outcome.Lane, out PlayerRole attackerRole)
+                if (PlayerRoleExtensions.LaneToRole.TryGetValue(outcome.Lane, out PlayerRole stuffAttackerRole)
                     && _teamPositions.TryGetValue(outcome.Team, out var attackerPositions)
-                    && attackerPositions.TryGetValue(attackerRole, out Transform stuffTarget))
+                    && attackerPositions.TryGetValue(stuffAttackerRole, out Transform stuffTarget))
                 {
-                    yield return QueueFlightAndWait(() => MoveBallToFloorPosition(stuffTarget, stuffedLandingPeakHeight));
+                    yield return QueueFlightAndWait(() => FlyStuffedLanding(attackTeam, stuffAttackerRole, shot, stuffTarget));
                 }
                 break;
             }
         }
     }
 
-    private IEnumerator FlyAttack(string defendingTeam, PlayerRole digger, bool soft, int attackValue, Vector3 offset, Func<bool> hold)
+    private IEnumerator FlyAttack(string attackTeam, PlayerRole attackerRole, ShotKind shot,
+        string defendingTeam, PlayerRole digger, bool soft, int attackValue, Vector3 offset, Func<bool> hold)
     {
+        // The hitter's own touch -- fires here, once the set that fed this swing
+        // (FlySwing) has genuinely reached them.
+        FireTouchCue(attackTeam, attackerRole, TouchKind.Attack, PlayerPosition(defendingTeam, digger), shot: shot);
         ClearFloatingNumbers(); // the ball crosses the net into this dig
         // The attack's own value transfers onto the ball -- it's what the dig has to beat.
         SetFloatingLabelOnBall(attackValue.ToString(), Color.white);
@@ -2637,6 +2703,19 @@ public class GameRunner : MonoBehaviour
         }
     }
 
+    private IEnumerator FlyDeflect(string team, PlayerRole attackerRole, ShotKind shot, Func<bool> hold)
+    {
+        FireTouchCue(team, attackerRole, TouchKind.Attack, PlayerPosition(team, DeflectDigRole), shot: shot);
+        yield return MoveBallTo(team, DeflectDigRole, pauseAtFraction: digPauseFraction,
+            holdWhile: hold, contactHeight: digContactHeight, allowBounce: false);
+    }
+
+    private IEnumerator FlyStuffedLanding(string team, PlayerRole attackerRole, ShotKind shot, Transform stuffTarget)
+    {
+        FireTouchCue(team, attackerRole, TouchKind.Attack, stuffTarget.position, shot: shot);
+        yield return MoveBallToFloorPosition(stuffTarget, stuffedLandingPeakHeight);
+    }
+
     private IEnumerator PresentDig(DigEvent dig)
     {
         SetFloatingLabel(dig.Team, dig.Digger, dig.Card.Value.ToString(), dig.Dug ? floatingSuccessColor : floatingFailureColor);
@@ -2644,7 +2723,7 @@ public class GameRunner : MonoBehaviour
         if (!dig.Dug)
         {
             // The kill drives straight on through the digger into the floor.
-            yield return RunFlightThroughToFloor(_attackFlight, dig.Team, dig.Digger);
+            yield return RunFlightThroughToFloor(_attackFlight, dig.Team, dig.Digger, TouchKind.Dig, dig.Shot);
             yield break;
         }
         // The digging team's Setter starts toward setting this ball right away --
@@ -2660,7 +2739,7 @@ public class GameRunner : MonoBehaviour
         {
             yield return new WaitUntil(() => attack.Done);
         }
-        LaunchPassToSetter(dig.Team, _presentIndex);
+        LaunchPassToSetter(dig.Team, _presentIndex, dig.Digger, TouchKind.Dig, dig.Shot);
     }
 
     private IEnumerator PresentDeflectDig(DeflectDigEvent deflect)
@@ -2670,7 +2749,7 @@ public class GameRunner : MonoBehaviour
         CutToPhaseCameraIfIdle("Dig");
         if (!deflect.Dug)
         {
-            yield return RunFlightThroughToFloor(_attackFlight, deflect.Team, DeflectDigRole);
+            yield return RunFlightThroughToFloor(_attackFlight, deflect.Team, DeflectDigRole, TouchKind.Deflect);
             yield break;
         }
         FlightHandle attack = _attackFlight;
@@ -2678,7 +2757,7 @@ public class GameRunner : MonoBehaviour
         {
             yield return new WaitUntil(() => attack.Done);
         }
-        LaunchPassToSetter(deflect.Team, _presentIndex);
+        LaunchPassToSetter(deflect.Team, _presentIndex, DeflectDigRole, TouchKind.Deflect);
     }
 
     private IEnumerator MoveBallTo(string teamName, PlayerRole role, float peakHeight = -1f,
